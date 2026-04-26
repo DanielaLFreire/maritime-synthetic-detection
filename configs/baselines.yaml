@@ -1,0 +1,28 @@
+# baselines.yaml
+# Baseline experiments (B1 and B2)
+
+B1:
+  name: "Baseline B1 — Random initialization"
+  description: "Train from scratch on CITRA-3D-Real (no pre-training)"
+  pipeline: "random_init → CITRA-3D-Real"
+  pretrain: null
+  finetune_data: "CITRA-3D-Real"
+  epochs: 300
+  patience: 30
+  seeds: [42, 123, 2024]
+  results:
+    mAP50: "0.8008 ± 0.0073"
+    mAP50_95: "0.4742 ± 0.0008"
+
+B2:
+  name: "Baseline B2 — COCO pre-trained"
+  description: "Fine-tune COCO pre-trained weights on CITRA-3D-Real"
+  pipeline: "COCO (yolo11m.pt) → CITRA-3D-Real"
+  pretrain: "yolo11m.pt (COCO)"
+  finetune_data: "CITRA-3D-Real"
+  epochs: 300
+  patience: 30
+  seeds: [42, 123, 2024]
+  results:
+    mAP50: "0.8351 ± 0.0024"
+    mAP50_95: "0.5055 ± 0.0027"

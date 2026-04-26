@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (too large for git — use Google Drive)
+data/
+datasets/
+*.jpg
+*.jpeg
+*.png
+*.rar
+*.zip
+
+# Model weights
+*.pt
+*.pth
+*.onnx
+
+# Ultralytics runs
+runs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+*.cache
+*.npz

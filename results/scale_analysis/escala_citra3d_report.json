@@ -1,0 +1,151 @@
+{
+  "generated_at": "2026-04-23T11:31:58.524237",
+  "root": "/content/drive/MyDrive/PROJETO_MARINHA/Datasets/CITRA-3D-Real",
+  "labels_subfolder": "labels_single_class",
+  "n_bboxes_total": 7003,
+  "n_images": 2081,
+  "bboxes_per_split": {
+    "train": 4489,
+    "val": 1267,
+    "test": 1247
+  },
+  "scale_analysis": {
+    "width_normalized": {
+      "count": 7003,
+      "mean": 0.047082,
+      "median": 0.030729,
+      "stdev": 0.051613,
+      "min": 0.003646,
+      "max": 0.551042,
+      "p5": 0.008854,
+      "p10": 0.010937,
+      "p25": 0.017188,
+      "p50": 0.030729,
+      "p75": 0.055729,
+      "p90": 0.102083,
+      "p95": 0.145313
+    },
+    "height_normalized": {
+      "count": 7003,
+      "mean": 0.045943,
+      "median": 0.032407,
+      "stdev": 0.041629,
+      "min": 0.003704,
+      "max": 0.437963,
+      "p5": 0.011111,
+      "p10": 0.013195,
+      "p25": 0.019793,
+      "p50": 0.032407,
+      "p75": 0.055556,
+      "p90": 0.096136,
+      "p95": 0.12963
+    },
+    "area_normalized": {
+      "count": 7003,
+      "mean": 0.003565,
+      "median": 0.00099,
+      "stdev": 0.009233,
+      "min": 2.7e-05,
+      "max": 0.210722,
+      "p5": 0.000112,
+      "p10": 0.000169,
+      "p25": 0.000365,
+      "p50": 0.00099,
+      "p75": 0.002969,
+      "p90": 0.008198,
+      "p95": 0.014815
+    },
+    "aspect_ratio": {
+      "count": 7003,
+      "mean": 1.098034,
+      "median": 1.011593,
+      "stdev": 0.606754,
+      "min": 0.094527,
+      "max": 4.870426,
+      "p5": 0.321415,
+      "p10": 0.39584,
+      "p25": 0.632805,
+      "p50": 1.011593,
+      "p75": 1.434785,
+      "p90": 1.912518,
+      "p95": 2.24294
+    },
+    "x_center": {
+      "count": 7003,
+      "mean": 0.492831,
+      "median": 0.491406,
+      "stdev": 0.255353,
+      "min": 0.00625,
+      "max": 0.991927,
+      "p5": 0.083333,
+      "p10": 0.140104,
+      "p25": 0.286198,
+      "p50": 0.491406,
+      "p75": 0.69401,
+      "p90": 0.853385,
+      "p95": 0.911979
+    },
+    "y_center": {
+      "count": 7003,
+      "mean": 0.534114,
+      "median": 0.535185,
+      "stdev": 0.138476,
+      "min": 0.020879,
+      "max": 0.972685,
+      "p5": 0.2625,
+      "p10": 0.366999,
+      "p25": 0.478704,
+      "p50": 0.535185,
+      "p75": 0.602315,
+      "p90": 0.702194,
+      "p95": 0.761573
+    }
+  },
+  "objects_per_image": {
+    "count": 2081,
+    "mean": 3.365209,
+    "median": 2,
+    "stdev": 3.332708,
+    "min": 1,
+    "max": 40,
+    "p5": 1,
+    "p10": 1,
+    "p25": 1,
+    "p50": 2,
+    "p75": 4,
+    "p90": 7,
+    "p95": 9
+  },
+  "coco_size_distribution": {
+    "small_count": 5013,
+    "small_pct": 71.6,
+    "medium_count": 1790,
+    "medium_pct": 25.6,
+    "large_count": 200,
+    "large_pct": 2.9,
+    "thresholds_note": "COCO-style para imgsz=640: small < 32²px, medium < 96²px, large >= 96²px"
+  },
+  "copy_paste_recommendations": {
+    "target_width_range": [
+      0.0109,
+      0.1021
+    ],
+    "target_height_range": [
+      0.0132,
+      0.0961
+    ],
+    "target_aspect_ratio_range": [
+      0.3958,
+      1.9125
+    ],
+    "target_objects_per_image_range": [
+      1,
+      7
+    ],
+    "target_y_center_range": [
+      0.367,
+      0.7022
+    ],
+    "note": "Usar estes ranges como parâmetros do copy-paste para gerar imagens com distribuição de escala similar ao CITRA-3D-Real."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-04-25T11:28:21.788570",
+  "version": "v3_in_place_substitution",
+  "seed": 42,
+  "img_size": 640,
+  "n_citra_images": 2081,
+  "n_citra_bboxes": 7003,
+  "n_variations_per_image": 13,
+  "n_images_total": 27796,
+  "n_objects_total": 93480,
+  "avg_objects_per_image": 3.36,
+  "splits": {
+    "train": {
+      "generated": 16678,
+      "failed": 0,
+      "objects": 56363
+    },
+    "val": {
+      "generated": 5559,
+      "failed": 0,
+      "objects": 18527
+    },
+    "test": {
+      "generated": 5559,
+      "failed": 0,
+      "objects": 18590
+    }
+  },
+  "crops_pool_size": 23828,
+  "elapsed_seconds": 22250.12330675125,
+  "elapsed_human": "370.8 min"
+}

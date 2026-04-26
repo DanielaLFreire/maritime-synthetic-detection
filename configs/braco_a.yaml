@@ -1,0 +1,33 @@
+# braco_a.yaml
+# Arm A — Curated direct pre-training (NEGATIVE TRANSFER)
+
+name: "Arm A — CLIP-curated InaTechShips (direct)"
+description: >
+  Pre-train on dataset_25k_v2 (CLIP-curated subset of InaTechShips,
+  cosine similarity ≥ 0.60 against CITRA-3D embeddings), then
+  fine-tune on CITRA-3D-Real.
+pipeline: "COCO → dataset_25k_v2 (100 ep) → CITRA-3D-Real (300 ep)"
+
+pretrain:
+  data: "dataset_25k_v2"
+  data_size: 27796
+  epochs: 100
+  patience: 20
+
+finetune:
+  data: "CITRA-3D-Real"
+  data_size: 1348  # train split
+  epochs: 300
+  patience: 30
+
+seeds: [42, 123, 2024]
+
+results:
+  mAP50: "0.7936 ± 0.0060"
+  mAP50_95: "0.4692 ± 0.0021"
+  delta_vs_B2: "-4.15%"
+  interpretation: >
+    NEGATIVE TRANSFER. Pre-training on InaTechShips overwrites useful
+    COCO features with domain-specific features that do not transfer
+    to the operational scenario. Performance is worse than both baselines
+    (B2 and even B1 random init).

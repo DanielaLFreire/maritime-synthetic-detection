@@ -1,0 +1,28 @@
+# hyperparams.yaml
+# Hyperparameters validated by HPO (Optuna TPE, 30 trials)
+# Decision: KEEP — best trial within 1σ of baseline (Δ mAP50 = −0.0023)
+#
+# These hyperparameters are used across ALL experimental arms
+# (baselines, arm A, arm B, arm A') to ensure the only variable
+# is the pre-training dataset.
+
+model: yolo11m.pt
+optimizer: AdamW
+lr0: 0.001
+lrf: 0.01
+momentum: 0.937
+weight_decay: 0.0005
+warmup_epochs: 3
+cos_lr: true
+imgsz: 640
+batch: 16
+
+# Training protocol
+pretrain_epochs: 100
+pretrain_patience: 20
+finetune_epochs: 300
+finetune_patience: 30
+
+# Reproducibility
+seeds: [42, 123, 2024]
+deterministic: true

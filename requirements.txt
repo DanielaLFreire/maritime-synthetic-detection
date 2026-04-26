@@ -1,0 +1,19 @@
+# Core
+ultralytics>=8.4
+torch>=2.0
+torchvision>=0.15
+
+# Synthetic generation
+segment-anything
+opencv-python
+Pillow>=9.0
+
+# HPO
+optuna>=3.0
+
+# Analysis
+numpy
+matplotlib
+
+# CLIP similarity (used in dataset curation)
+open_clip_torch
