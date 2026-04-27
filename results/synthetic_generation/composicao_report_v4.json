@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-04-27T08:37:42",
+  "version": "v4_split_isolated",
+  "seed": 42,
+  "img_size": 640,
+  "n_variations_per_image": 13,
+  "crops_pool_size": 27796,
+  "data_leakage_fix": "Each synthetic split generated ONLY from the corresponding CITRA-3D-Real split. No test backgrounds in synthetic train.",
+  "splits": {
+    "train": {
+      "generated": 17524,
+      "objects": 58354,
+      "failed": 0
+    },
+    "val": {
+      "generated": 4316,
+      "objects": 16470,
+      "failed": 0
+    },
+    "test": {
+      "generated": 5213,
+      "objects": 16211,
+      "failed": 0
+    }
+  },
+  "n_images_total": 27053,
+  "n_objects_total": 91035,
+  "avg_objects_per_image": 3.37,
+  "elapsed_seconds": 15647.20969748497,
+  "elapsed_human": "260.8 min"
+}

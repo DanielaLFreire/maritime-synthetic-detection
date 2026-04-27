@@ -1,16 +1,17 @@
 # braco_b.yaml
-# Arm B — Random subset (diagnostic, 1 seed)
+# Arm B — Random subset (3 seeds)
 
-name: "Arm B — Random InaTechShips subset (diagnostic)"
+name: "Arm B — Random InaTechShips subset"
 description: >
   Pre-train on random_pool_v2 (random subset of InaTechShips, same
   size as dataset_25k_v2 but without CLIP curation), then fine-tune
-  on CITRA-3D-Real. Single seed diagnostic to confirm B ≈ A.
+  on CITRA-3D-Real. Confirms that negative transfer is independent
+  of curation strategy (B ≈ A).
 pipeline: "COCO → random_pool_v2 (100 ep) → CITRA-3D-Real (300 ep)"
 
 pretrain:
   data: "random_pool_v2"
-  data_size: 27964  # with labels from Eduardo (91.5% coverage)
+  data_size: 27964
   epochs: 100
   patience: 20
 
@@ -19,16 +20,8 @@ finetune:
   epochs: 300
   patience: 30
 
-seeds: [42]  # diagnostic — 1 seed sufficient
+seeds: [42, 123, 2024]
 
 results:
-  mAP50: "0.7997"
-  mAP50_95: "0.4711"
-  delta_vs_B2: "-3.54%"
-  delta_vs_A: "+0.61%"
-  interpretation: >
-    B ≈ A. The random subset performs equivalently to the CLIP-curated
-    subset (difference of 0.61%, within 1σ of arm A variance). This
-    confirms that negative transfer is caused by structural domain
-    incompatibility (scale, density, context), not by CLIP curation
-    failure.
+  note: "Awaiting seeds 123 and 2024"
+  seed_42: { mAP50: 0.7997, mAP50_95: 0.4711 }

@@ -1,43 +1,234 @@
-% Main paper
-@article{freire2026maritime,
-  title={Visual Similarity Is Not Enough: Domain-Adapted Synthetic Data for Maritime Vessel Detection},
-  author={Freire, Daniela L. and Teixeira, Eduardo H. and Moreira, Leandro A. S.},
-  year={2026},
-  note={In preparation}
-}
+% ================================================================
+% References — Visual Similarity Is Not Enough
+% All references verified against real publications
+% ================================================================
 
-% InaTechShips dataset
-@article{TEIXEIRA2025120823,
-  title={InaTechShips: A validation study of a novel ship dataset through deep learning-based classification and detection models for maritime applications},
+% === Core references ===
+
+@article{teixeira2025inatechships,
+  title={{InaTechShips}: A validation study of a novel ship dataset through deep learning-based classification and detection models for maritime applications},
+  author={Teixeira, Eduardo H. and Mafra, Samuel B. and De Figueiredo, Felipe A. P.},
   journal={Ocean Engineering},
   volume={326},
   pages={120823},
   year={2025},
-  issn={0029-8018},
-  doi={https://doi.org/10.1016/j.oceaneng.2025.120823},
-  author={Eduardo H. Teixeira and Samuel B. Mafra and Felipe A.P. {De Figueiredo}},
+  publisher={Elsevier},
+  doi={10.1016/j.oceaneng.2025.120823}
 }
 
-% Copy-paste augmentation (maritime)
-@article{ruizponce2023poseidon,
-  title={POSEIDON: A Data Augmentation Tool for Small Object Detection Datasets in Maritime Environments},
-  author={Ruiz-Ponce, Pablo and others},
-  journal={Sensors},
-  year={2023}
+@misc{jocher2023ultralytics,
+  title={Ultralytics {YOLO}},
+  author={Jocher, Glenn and Chaurasia, Ayush and Qiu, Jing},
+  year={2023},
+  howpublished={\url{https://github.com/ultralytics/ultralytics}}
 }
 
-% Small-scale ship detection with copy-paste
-@inproceedings{li2024s3det,
-  title={S3Det: Small-Scale Ship Detection with Feedback Cut\&Paste},
-  author={Li, others},
-  booktitle={ACCV},
-  year={2024}
-}
-
-% Segment Anything Model
-@article{kirillov2023sam,
+@inproceedings{kirillov2023segment,
   title={Segment Anything},
-  author={Kirillov, Alexander and others},
-  journal={ICCV},
+  author={Kirillov, Alexander and Mintun, Eric and Ravi, Nikhila and Mao, Hanzi and Rolland, Chloe and Gustafson, Laura and Xiao, Tete and Whitehead, Spencer and Berg, Alexander C. and Lo, Wan-Yen and Doll{\'a}r, Piotr and Girshick, Ross},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  pages={4015--4026},
   year={2023}
+}
+
+@inproceedings{radford2021learning,
+  title={Learning Transferable Visual Models From Natural Language Supervision},
+  author={Radford, Alec and Kim, Jong Wook and Hallacy, Chris and Ramesh, Aditya and Goh, Gabriel and Agarwal, Sandhini and Sastry, Girish and Askell, Amanda and Mishkin, Pamela and Clark, Jack and others},
+  booktitle={International Conference on Machine Learning (ICML)},
+  pages={8748--8763},
+  year={2021}
+}
+
+% === Copy-paste augmentation ===
+
+@inproceedings{ghiasi2021simple,
+  title={Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation},
+  author={Ghiasi, Golnaz and Cui, Yin and Srinivas, Aravind and Qian, Rui and Lin, Tsung-Yi and Cubuk, Ekin D. and Le, Quoc V. and Zoph, Barret},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={2918--2928},
+  year={2021}
+}
+
+@article{ruizponce2023poseidon,
+  title={{POSEIDON}: A Data Augmentation Tool for Small Object Detection Datasets in Maritime Environments},
+  author={Ruiz-Ponce, Pablo and Ortiz-Perez, David and Garcia-Rodriguez, Jose and Kiefer, Benjamin},
+  journal={Sensors},
+  volume={23},
+  number={7},
+  pages={3691},
+  year={2023},
+  publisher={MDPI},
+  doi={10.3390/s23073691}
+}
+
+@inproceedings{li2024s3det,
+  title={Spotlight on Small-Scale Ship Detection: Empowering {YOLO} with Advanced Techniques and a Novel Dataset},
+  author={Li, Lingya and Hou, Zhixing and Ma, Ming and Xiang, Jing and Yuan, Chuangxin and Xia, Guihua},
+  booktitle={Proceedings of the Asian Conference on Computer Vision (ACCV)},
+  pages={784--799},
+  year={2024},
+  publisher={Springer},
+  doi={10.1007/978-981-96-0960-4_1}
+}
+
+@article{nemati2025maritime,
+  title={Enhancing Maritime Object Detection in Real-Time with {RT-DETR} and Data Augmentation},
+  author={Nemati, Nader},
+  journal={arXiv preprint arXiv:2510.07346},
+  year={2025}
+}
+
+% === YOLO family ===
+
+@inproceedings{redmon2016you,
+  title={You Only Look Once: Unified, Real-Time Object Detection},
+  author={Redmon, Joseph and Divvala, Santosh and Girshick, Ross and Farhadi, Ali},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={779--788},
+  year={2016}
+}
+
+% === Transfer learning, catastrophic forgetting, negative transfer ===
+
+@article{mccloskey1989catastrophic,
+  title={Catastrophic Interference in Connectionist Networks: The Sequential Learning Problem},
+  author={McCloskey, Michael and Cohen, Neal J.},
+  journal={Psychology of Learning and Motivation},
+  volume={24},
+  pages={109--165},
+  year={1989},
+  publisher={Elsevier}
+}
+
+@article{french1999catastrophic,
+  title={Catastrophic Forgetting in Connectionist Networks},
+  author={French, Robert M.},
+  journal={Trends in Cognitive Sciences},
+  volume={3},
+  number={4},
+  pages={128--135},
+  year={1999}
+}
+
+@article{zhang2023negative,
+  title={A Survey on Negative Transfer},
+  author={Zhang, Wen and Deng, Lingfei and Zhang, Lei and Wu, Dongrui},
+  journal={IEEE/CAA Journal of Automatica Sinica},
+  volume={10},
+  number={2},
+  pages={305--329},
+  year={2023},
+  doi={10.1109/JAS.2022.106004}
+}
+
+@article{yang2024forgetting,
+  title={A Comprehensive Survey of Forgetting in Deep Learning Beyond Continual Learning},
+  author={Yang, Enneng and Wang, Zhenyi and Shen, Li and others},
+  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume={47},
+  number={3},
+  pages={1464--1491},
+  year={2025},
+  doi={10.1109/TPAMI.2024.3498295}
+}
+
+% === Domain adaptation for object detection ===
+
+@inproceedings{chen2018domain,
+  title={Domain Adaptive {Faster R-CNN} for Object Detection in the Wild},
+  author={Chen, Yuhua and Li, Wen and Sakaridis, Christos and Dai, Dengxin and Van Gool, Luc},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={3339--3348},
+  year={2018}
+}
+
+@article{oza2023unsupervised,
+  title={Unsupervised Domain Adaptation of Object Detectors: A Survey},
+  author={Oza, Poojan and Sindagi, Vishwanath A. and Sharmini, Vibashan V. S. and Patel, Vishal M.},
+  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume={45},
+  number={10},
+  pages={11483--11501},
+  year={2023}
+}
+
+% === Transferability and task similarity ===
+
+@inproceedings{zamir2018taskonomy,
+  title={Taskonomy: Disentangling Task Transfer Learning},
+  author={Zamir, Amir R. and Sax, Alexander and Shen, William and Guibas, Leonidas J. and Malik, Jitendra and Savarese, Silvio},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={3712--3722},
+  year={2018}
+}
+
+@inproceedings{cui2018large,
+  title={Large Scale Fine-Grained Categorization and Domain-Specific Transfer Learning},
+  author={Cui, Yin and Song, Yang and Sun, Chen and Howard, Andrew and Belongie, Serge},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={4109--4118},
+  year={2018}
+}
+
+% === HPO ===
+
+@inproceedings{akiba2019optuna,
+  title={Optuna: A Next-generation Hyperparameter Optimization Framework},
+  author={Akiba, Takuya and Sano, Shotaro and Yanase, Toshihiko and Ohta, Takeru and Koyama, Masanori},
+  booktitle={Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery \& Data Mining},
+  pages={2623--2631},
+  year={2019}
+}
+
+% === PointRend ===
+
+@inproceedings{kirillov2020pointrend,
+  title={{PointRend}: Image Segmentation as Rendering},
+  author={Kirillov, Alexander and Wu, Yuxin and He, Kaiming and Girshick, Ross},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={9799--9808},
+  year={2020}
+}
+
+% === COCO ===
+
+@inproceedings{lin2014microsoft,
+  title={Microsoft {COCO}: Common Objects in Context},
+  author={Lin, Tsung-Yi and Maire, Michael and Belongie, Serge and Hays, James and Perona, Pietro and Ramanan, Deva and Doll{\'a}r, Piotr and Zitnick, C. Lawrence},
+  booktitle={European Conference on Computer Vision (ECCV)},
+  pages={740--755},
+  year={2014},
+  publisher={Springer}
+}
+
+% === Maritime detection ===
+
+@article{liu2025yolov8resattnet,
+  title={A High-Accuracy {YOLOv8-ResAttNet} Framework for Maritime Vessel Detection Using Residual Attention},
+  author={Liu, Peng and Sun, Mingyu and Han, Xiaobing and Liu, Shuo and Chen, Yuxin and Zhang, Haibo},
+  journal={IET Image Processing},
+  volume={19},
+  pages={e70085},
+  year={2025},
+  doi={10.1049/ipr2.70085}
+}
+
+@article{shao2018seaships,
+  title={{SeaShips}: A Large-Scale Precisely Annotated Dataset for Ship Detection},
+  author={Shao, Zhenfeng and Wu, Wan and Wang, Zhongyuan and Du, Wan and Li, Chengyuan},
+  journal={IEEE Transactions on Multimedia},
+  volume={20},
+  number={10},
+  pages={2593--2604},
+  year={2018}
+}
+
+@article{ribeiro2022synthetic,
+  title={Real-Time Ship Segmentation in Maritime Surveillance Videos Using Automatically Annotated Synthetic Datasets},
+  author={Ribeiro, Ruben and Damas, Bruno and Bernardino, Alexandre},
+  journal={Sensors},
+  volume={22},
+  number={21},
+  pages={8090},
+  year={2022}
 }

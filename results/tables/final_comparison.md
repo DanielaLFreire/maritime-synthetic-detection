@@ -1,14 +1,29 @@
 # Final Comparison — All Experimental Arms
 
+> **Note:** A' v4 results and B (3 seeds) pending. v3 results deprecated due to data leakage.
+
 ## Main Results (test set, CITRA-3D-Real)
 
 | Rank | Arm | Pipeline | mAP50 | mAP50-95 | Δ mAP50 vs B2 | Seeds |
 |------|-----|----------|-------|----------|---------------|-------|
-| **1** | **A' (synthetic)** | **COCO → copy-paste → CITRA-3D** | **0.8541 ± 0.0043** | **0.5281 ± 0.0056** | **+1.90%** | 3 |
+| **1** | **A' (synthetic v4)** | **COCO → synthetic → CITRA-3D** | **TBD** | **TBD** | **TBD** | 3 |
 | 2 | B2 (baseline) | COCO → CITRA-3D | 0.8351 ± 0.0024 | 0.5055 ± 0.0027 | ref | 3 |
 | 3 | B1 (baseline) | Random init → CITRA-3D | 0.8008 ± 0.0073 | 0.4742 ± 0.0008 | −3.43% | 3 |
-| 4 | B (random) | COCO → random pool → CITRA-3D | 0.7997 | 0.4711 | −3.54% | 1 |
+| 4 | B (random) | COCO → random pool → CITRA-3D | TBD (3 seeds) | TBD | TBD | 3 |
 | 5 | A (curated) | COCO → InaTechShips → CITRA-3D | 0.7936 ± 0.0060 | 0.4692 ± 0.0021 | −4.15% | 3 |
+
+## Deprecated v3 Results (data leakage — DO NOT USE)
+
+| Arm | mAP50 | Note |
+|-----|-------|------|
+| A' v3 | 0.8541 ± 0.0043 | **INVALIDATED** — synthetic train contained test backgrounds |
+
+## Data Integrity (v4)
+
+- Synthetic train generated ONLY from CITRA-3D-Real train (1,348 × 13 = 17,524 images)
+- Synthetic val generated ONLY from CITRA-3D-Real val (332 × 13 = 4,316 images)
+- Synthetic test generated ONLY from CITRA-3D-Real test (401 × 13 = 5,213 images)
+- Total: 27,053 images, 91,035 objects, 3.37 obj/img
 
 ## Ablation: Pre-training Epochs (seed 42)
 
@@ -20,20 +35,11 @@
 | 50 | 0.8037 | −3.14% |
 | 100 (arm A) | 0.8006 | −3.45% |
 
-## Statistical Separation (A' vs B2)
-
-| Metric | A' | B2 | Separation |
-|--------|----|----|------------|
-| mAP50 mean | 0.8541 | 0.8351 | Δ = +0.0190 |
-| mAP50 CI | [0.8498, 0.8584] | [0.8327, 0.8375] | No overlap |
-| σ separation | — | — | 7.9σ |
-| mAP50-95 mean | 0.5281 | 0.5055 | Δ = +0.0226 (+4.5% rel.) |
-
 ## Dataset Statistics
 
-| Dataset | Images | Objects | Obj/img | Small (COCO) |
-|---------|--------|---------|---------|--------------|
-| CITRA-3D-Real | 2,081 | 7,003 | 3.37 | 71.6% |
-| dataset_25k_v2 (curated) | 27,796 | ~27,796 | ~1.0 | <5% |
-| random_pool_v2 | 27,964 | — | ~1.0 | <5% |
-| dataset_sintetico (v3) | 27,796 | 93,480 | 3.36 | ~71% |
+| Dataset | Images | Objects | Obj/img |
+|---------|--------|---------|---------|
+| CITRA-3D-Real | 2,081 | 7,003 | 3.37 |
+| dataset_25k_v2 (curated) | 27,796 | ~27,796 | ~1.0 |
+| random_pool_v2 | 27,964 | — | ~1.0 |
+| dataset_sintetico_v4 | 27,053 | 91,035 | 3.37 |
