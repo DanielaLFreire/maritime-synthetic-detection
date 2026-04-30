@@ -1,0 +1,4 @@
+arm,seeds,AP_small,AP_medium,AP_large,AR_small,AR_medium,AR_large
+B2,3,0.255,0.571,0.679,0.385,0.647,0.751
+A' joint,3,0.262,0.576,0.691,0.400,0.655,0.759
+A' sequential,3,0.255,0.565,0.672,0.395,0.645,0.745

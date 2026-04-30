@@ -1,0 +1,65 @@
+{
+  "B2 seed42": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  },
+  "B2 seed123": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  },
+  "B2 seed2024": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  },
+  "Joint seed42": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  },
+  "Joint seed123": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  },
+  "Joint seed2024": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  },
+  "Seq seed42": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  },
+  "Seq seed123": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  },
+  "Seq seed2024": {
+    "AP50": 0.0,
+    "AP50-95": 0.0,
+    "AP_small": 0.0,
+    "AP_medium": 0.0,
+    "AP_large": 0.0
+  }
+}
