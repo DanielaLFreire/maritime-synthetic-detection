@@ -1,0 +1,35 @@
+Dear Editor,
+
+We would like to submit our manuscript entitled "Visual Similarity Is Not Enough: Domain-Adapted Synthetic Data for Maritime Vessel Detection" for consideration for publication in Ocean Engineering.
+
+Maritime surveillance systems increasingly rely on automated vessel detection, yet operational datasets from coastal and port-monitoring cameras remain scarce and difficult to annotate. While large public ship image datasets exist, their direct use as training data does not necessarily improve detection in operational settings. This paper addresses this gap through a systematic experimental investigation.
+
+Our key findings are:
+
+1. Direct transfer learning from the InaTechShips public ship dataset (~28,000 images) to an operational maritime surveillance dataset (CITRA-3D-Real, 2,081 images) causes negative transfer, reducing mAP50 by 4.15% compared to a COCO-pretrained baseline. This holds regardless of whether images are selected by CLIP visual similarity or randomly sampled, indicating a structural domain gap rather than a curation failure.
+
+2. We identify three axes of incompatibility: scale (ships occupy ~80% vs ~3% of the image), object density (1 vs 3.37 per image), and capture context (professional photography vs operational surveillance).
+
+3. We propose in-place synthetic composition — a method that segments ships from public images using SAM, resizes them to operational scale, and places them at positions where real vessels were observed. This simple approach bridges the domain gap and improves detection performance over the COCO baseline with non-overlapping confidence intervals.
+
+We believe this work is well suited for Ocean Engineering because it directly addresses a practical challenge in maritime surveillance technology: how to leverage publicly available ship imagery for operational detection systems. The experimental framework, including reproducible code and configurations published on GitHub, provides a resource for the maritime detection research community.
+
+The manuscript has not been published previously and is not under consideration elsewhere. All authors have approved the submission. We declare no competing interests.
+
+We suggest the following potential reviewers with relevant expertise in maritime object detection and synthetic data augmentation:
+
+1. Prof. Jose Garcia-Rodriguez — University of Alicante, Spain (jgarcia@dtic.ua.es) — Expert in maritime object detection and the POSEIDON augmentation framework.
+
+2. Dr. Zhenfeng Shao — Wuhan University, China (shaozhenfeng@whu.edu.cn) — Creator of the SeaShips dataset and expert in maritime image analysis.
+
+3. Dr. Alexandre Bernardino — IST, University of Lisbon, Portugal (alex@isr.tecnico.ulisboa.pt) — Expert in synthetic data for maritime surveillance and ship segmentation.
+
+Thank you for considering our manuscript.
+
+Sincerely,
+
+Daniela L. Freire (corresponding author)
+Institute of Mathematics and Computer Science (ICMC)
+University of São Paulo (USP)
+São Carlos, SP, Brazil
+daniela.freire@usp.br

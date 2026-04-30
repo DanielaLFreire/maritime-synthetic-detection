@@ -1,446 +1,266 @@
 """
-gerar_dataset_copypaste.py (v3 — substituição in-place)
+gerar_dataset_copypaste_v4.py
 
-Gera dataset sintético substituindo as embarcações reais do CITRA-3D-Real
-por crops do InaTechShips, na MESMA posição e MESMA dimensão dos bboxes
-originais.
+Versão corrigida que respeita os splits originais do CITRA-3D-Real.
+Cada split sintético é gerado APENAS a partir do split correspondente:
+  - synthetic/train ← fundos de CITRA-3D/train
+  - synthetic/val   ← fundos de CITRA-3D/val
+  - synthetic/test  ← fundos de CITRA-3D/test
 
-ABORDAGEM
+Cada split sintético é gerado apenas do split correspondente do CITRA-3D
+durante o pré-treino.
 
-  Para cada imagem do CITRA-3D-Real:
-    1. Lê os N bounding boxes originais (posição e tamanho reais)
-    2. Para cada bbox, sorteia um crop aleatório do pool InaTechShips
-    3. Redimensiona o crop para caber exatamente no bbox
-    4. Cola o crop com alpha blending na posição do bbox
-    5. O label YOLO é IDÊNTICO ao original (mesmo x,y,w,h)
+USO:
+  python gerar_dataset_copypaste_v4.py
 
-  Para gerar ~27k imagens a partir de 2.081 fundos:
-    - Gera ~13 variações por imagem (cada uma com crops diferentes)
-    - Cada variação tem os mesmos slots mas navios diferentes
-
-VANTAGENS
-
-  - Posição garantida na água (navios reais estavam lá)
-  - Escala garantida correta (mesmo tamanho do bbox real)
-  - Densidade garantida correta (mesmo número de objetos)
-  - Zero heurística de cor, zero detecção de água
-  - Labels 100% precisos (reutiliza os originais)
-  - Cientificamente defensável: zero decisões arbitrárias de posicionamento
-
-USO
-
-  python gerar_dataset_copypaste.py --n-images 100 --preview   # teste
-  python gerar_dataset_copypaste.py                             # batch (~27k)
-
-SAÍDA
-
-  /content/drive/MyDrive/InaTechShips/dataset_sintetico/
-  ├── train/{images,labels}/
-  ├── val/{images,labels}/
-  ├── test/{images,labels}/
-  ├── data_single_class.yaml
-  └── composicao_report.json
+CONFIGURAÇÃO (edite os caminhos abaixo):
 """
 
-from __future__ import annotations
-
-import argparse
-import json
-import random
-import sys
-import time
-from datetime import datetime
 from pathlib import Path
-
-import numpy as np
 from PIL import Image
+import numpy as np
+import json
+import time
+import random
+import shutil
 
 # ═══════════════════════════════════════════════════════════════════
-# Configuração
+# CONFIGURAÇÃO
 # ═══════════════════════════════════════════════════════════════════
 
-DRIVE_BASE = Path("/content/drive/MyDrive")
-
-CROPS_DIR = DRIVE_BASE / "InaTechShips" / "crops_sam"
+CITRA_ROOT = Path("/content/drive/MyDrive/PROJETO_MARINHA/Datasets/CITRA-3D-Real")
+CROPS_DIR = Path("/content/drive/MyDrive/InaTechShips/crops_sam")
 CROPS_META = CROPS_DIR / "crops_metadata_full.json"
-CITRA3D_ROOT = DRIVE_BASE / "PROJETO_MARINHA" / "Datasets" / "CITRA-3D-Real"
-OUTPUT_DIR = DRIVE_BASE / "InaTechShips" / "dataset_sintetico"
-
+OUTPUT_DIR = Path("/content/drive/MyDrive/InaTechShips/dataset_sintetico_v4")
+N_VARIATIONS = 13
 SEED = 42
-
-# Filtro de qualidade dos crops
-MIN_COVERAGE = 0.25
-MAX_COVERAGE = 0.95
-MIN_SIZE_PX = 50
-MIN_AR = 0.2
-MAX_AR = 8.0
-
-SPLIT_PROPORTIONS = {"train": 0.60, "val": 0.20, "test": 0.20}
-
+IMG_SIZE = 640
 
 # ═══════════════════════════════════════════════════════════════════
-# Helpers
+# FUNÇÕES
 # ═══════════════════════════════════════════════════════════════════
 
-def load_filtered_crops(meta_path: Path) -> list[dict]:
-    """Carrega crops que passam no filtro de qualidade."""
-    with open(meta_path) as f:
-        crops = json.load(f).get("crops", [])
-    filtered = [c for c in crops
-                if MIN_COVERAGE <= c.get("mask_coverage", 0) <= MAX_COVERAGE
-                and c.get("crop_size", [0, 0])[0] >= MIN_SIZE_PX
-                and c.get("crop_size", [0, 0])[1] >= MIN_SIZE_PX
-                and MIN_AR <= c.get("aspect_ratio", 0) <= MAX_AR]
-    print(f"   Crops: {len(crops):,} total → {len(filtered):,} após filtro")
-    return filtered
+def load_crops_pool(crops_dir, metadata_path):
+    """Carrega pool de crops filtrados."""
+    with open(metadata_path) as f:
+        meta = json.load(f)
+    
+    pool = []
+    for crop_id, info in meta.items():
+        crop_path = crops_dir / info.get("filename", f"{crop_id}.png")
+        if crop_path.exists() and info.get("passed_filter", True):
+            pool.append(crop_path)
+    
+    print(f"  Pool de crops: {len(pool):,}")
+    return pool
 
 
-def read_yolo_labels(label_path: Path) -> list[list[float]]:
-    """Lê labels YOLO. Retorna lista de [class_id, xc, yc, w, h]."""
-    labels = []
-    if not label_path.exists():
-        return labels
-    with open(label_path) as f:
-        for line in f:
+def read_labels(label_path):
+    """Lê labels YOLO (classe x_center y_center width height)."""
+    bboxes = []
+    if label_path.exists():
+        for line in open(label_path):
             parts = line.strip().split()
             if len(parts) >= 5:
-                try:
-                    labels.append([float(p) for p in parts[:5]])
-                except ValueError:
-                    continue
-    return labels
+                cls = int(parts[0])
+                xc, yc, w, h = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
+                bboxes.append((cls, xc, yc, w, h))
+    return bboxes
 
 
-def collect_citra3d_images(root: Path) -> list[dict]:
-    """Coleta todas as imagens do CITRA-3D-Real com seus labels."""
-    pairs = []
-    for split in ("train", "val", "test"):
-        images_dir = root / split / "images"
-        labels_dir = root / split / "labels_single_class"
-        if not labels_dir.exists():
-            labels_dir = root / split / "labels"
-        if not images_dir.exists():
-            continue
-
-        for img_path in sorted(images_dir.iterdir()):
-            if img_path.suffix.lower() not in (".jpg", ".jpeg", ".png"):
-                continue
-            label_path = labels_dir / f"{img_path.stem}.txt"
-            labels = read_yolo_labels(label_path)
-            if labels:  # só usa imagens que têm pelo menos 1 bbox
-                pairs.append({
-                    "image_path": img_path,
-                    "label_path": label_path,
-                    "image_id": img_path.stem,
-                    "split": split,
-                    "labels": labels,
-                    "n_objects": len(labels),
-                })
-
-    return pairs
-
-
-def compose_one_variation(
-    bg_image: np.ndarray,
-    labels: list[list[float]],
-    crop_pool: list[dict],
-    crops_dir: Path,
-    rng: random.Random,
-    img_size: int = 640,
-) -> np.ndarray | None:
+def compose_image(bg_path, bboxes, crops_pool, rng, img_size=640):
     """
-    Gera UMA variação de uma imagem do CITRA-3D substituindo cada navio
-    por um crop aleatório do InaTechShips, na mesma posição e dimensão.
-
-    Retorna a imagem composta (RGB numpy array) ou None se falhar.
-    Os labels são idênticos aos originais (não precisam ser recalculados).
+    Compõe uma imagem sintética por substituição in-place.
+    Para cada bbox, seleciona um crop aleatório, redimensiona para
+    o tamanho do bbox, e cola via alpha blending.
     """
-    # Redimensiona fundo para img_size × img_size
-    try:
-        bg_pil = Image.fromarray(bg_image).resize((img_size, img_size), Image.LANCZOS)
-        canvas = np.array(bg_pil)
-    except Exception:
-        return None
-
+    bg = Image.open(bg_path).convert("RGB").resize((img_size, img_size))
+    bg_arr = np.array(bg, dtype=np.float32)
+    
     n_placed = 0
-
-    for label in labels:
-        # Label YOLO: [class_id, x_center, y_center, width, height] normalizado
-        _, xc, yc, w, h = label
-
-        # Converte para pixels
-        bbox_w = max(4, int(w * img_size))
-        bbox_h = max(4, int(h * img_size))
-        x1 = max(0, int((xc - w / 2) * img_size))
-        y1 = max(0, int((yc - h / 2) * img_size))
-        x2 = min(img_size, x1 + bbox_w)
-        y2 = min(img_size, y1 + bbox_h)
-
-        actual_w = x2 - x1
-        actual_h = y2 - y1
-        if actual_w < 4 or actual_h < 4:
-            continue
-
-        # Sorteia um crop
-        crop_meta = rng.choice(crop_pool)
-        crop_path = crops_dir / f"{crop_meta['photo_id']}.png"
-
+    for cls, xc, yc, w, h in bboxes:
+        # Converte normalized → pixels
+        px_w = max(4, int(w * img_size))
+        px_h = max(4, int(h * img_size))
+        px_x = int((xc - w/2) * img_size)
+        px_y = int((yc - h/2) * img_size)
+        
+        # Clipa aos limites da imagem
+        px_x = max(0, min(px_x, img_size - px_w))
+        px_y = max(0, min(px_y, img_size - px_h))
+        
+        # Seleciona crop aleatório
+        crop_path = rng.choice(crops_pool)
         try:
-            crop_img = Image.open(crop_path).convert("RGBA")
+            crop = Image.open(crop_path).convert("RGBA").resize((px_w, px_h))
         except Exception:
             continue
-
-        # Redimensiona o crop para caber exatamente no bbox
-        crop_resized = crop_img.resize((actual_w, actual_h), Image.LANCZOS)
-        crop_arr = np.array(crop_resized)
-
+        
+        crop_arr = np.array(crop, dtype=np.float32)
+        alpha = crop_arr[:, :, 3:4] / 255.0
+        rgb = crop_arr[:, :, :3]
+        
+        # Ajusta tamanho se necessário
+        actual_h = min(px_h, img_size - px_y)
+        actual_w = min(px_w, img_size - px_x)
+        if actual_h < px_h or actual_w < px_w:
+            alpha = alpha[:actual_h, :actual_w]
+            rgb = rgb[:actual_h, :actual_w]
+        
         # Alpha blending
-        alpha = crop_arr[:, :, 3:4].astype(np.float32) / 255.0
-        rgb = crop_arr[:, :, :3].astype(np.float32)
-        region = canvas[y1:y2, x1:x2].astype(np.float32)
-
-        blended = rgb * alpha + region * (1 - alpha)
-        canvas[y1:y2, x1:x2] = blended.astype(np.uint8)
-        n_placed += 1
-
-    return canvas if n_placed > 0 else None
-
-
-# ═══════════════════════════════════════════════════════════════════
-# Main
-# ═══════════════════════════════════════════════════════════════════
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Gerar dataset sintético v3 (substituição in-place)")
-    parser.add_argument("--crops-dir", type=Path, default=CROPS_DIR)
-    parser.add_argument("--crops-meta", type=Path, default=CROPS_META)
-    parser.add_argument("--citra3d-root", type=Path, default=CITRA3D_ROOT)
-    parser.add_argument("--output", type=Path, default=OUTPUT_DIR)
-    parser.add_argument("--n-images", type=int, default=None,
-                        help="Número total de imagens (default: 27796)")
-    parser.add_argument("--img-size", type=int, default=640)
-    parser.add_argument("--seed", type=int, default=SEED)
-    parser.add_argument("--preview", action="store_true",
-                        help="Salva 10 previews com bboxes desenhados")
-    args = parser.parse_args()
-
-    n_target = args.n_images or 27796
-
-    print("=" * 72)
-    print("  Dataset sintético v3 — Substituição In-Place (Passo 4)")
-    print("=" * 72)
-    print(f"  Crops:     {args.crops_dir}")
-    print(f"  CITRA-3D:  {args.citra3d_root}")
-    print(f"  Saída:     {args.output}")
-    print(f"  N imagens: {n_target:,}")
-    print(f"  Img size:  {args.img_size}×{args.img_size}")
-    print(f"  Seed:      {args.seed}")
-    print("=" * 72)
-
-    # ── Carrega recursos ──
-    print(f"\n>> Carregando recursos...")
-    crop_pool = load_filtered_crops(args.crops_meta)
-    if not crop_pool:
-        print("✗ Nenhum crop usável"); sys.exit(1)
-
-    print(f"\n>> Coletando imagens do CITRA-3D-Real...")
-    citra_images = collect_citra3d_images(args.citra3d_root)
-    n_citra = len(citra_images)
-    total_bboxes = sum(img["n_objects"] for img in citra_images)
-    print(f"   {n_citra:,} imagens com {total_bboxes:,} bboxes")
-
-    if n_citra == 0:
-        print("✗ Nenhuma imagem CITRA-3D encontrada"); sys.exit(1)
-
-    # ── Calcula variações por imagem ──
-    n_variations = max(1, n_target // n_citra)
-    n_remainder = n_target - (n_variations * n_citra)
-    print(f"\n>> Plano: {n_variations} variações × {n_citra:,} imagens "
-          f"= {n_variations * n_citra:,}")
-    if n_remainder > 0:
-        print(f"   + {n_remainder:,} variações extras (primeiras imagens)")
-
-    # ── Calcula split ──
-    n_train = int(round(SPLIT_PROPORTIONS["train"] * n_target))
-    n_val = int(round(SPLIT_PROPORTIONS["val"] * n_target))
-    n_test = n_target - n_train - n_val
-    split_plan = {"train": n_train, "val": n_val, "test": n_test}
-    print(f"   Split: {' | '.join(f'{s}={n:,}' for s, n in split_plan.items())}")
-
-    for s in split_plan:
-        (args.output / s / "images").mkdir(parents=True, exist_ok=True)
-        (args.output / s / "labels").mkdir(parents=True, exist_ok=True)
-
-    # ── Gera lista de trabalho (imagem × variação) ──
-    rng = random.Random(args.seed)
-    work_list = []
-    for var_idx in range(n_variations):
-        for citra_img in citra_images:
-            work_list.append((citra_img, var_idx))
-
-    # Adiciona variações extras para atingir n_target
-    if n_remainder > 0:
-        extra_images = rng.sample(citra_images, min(n_remainder, n_citra))
-        for citra_img in extra_images:
-            work_list.append((citra_img, n_variations))
-
-    # Shuffle para misturar variações (evita que todas as var_0 fiquem no train)
-    rng.shuffle(work_list)
-
-    # Trunca ao alvo
-    work_list = work_list[:n_target]
-
-    # Atribui splits
-    split_assignments = []
-    idx = 0
-    for split, n_split in split_plan.items():
-        for _ in range(n_split):
-            if idx < len(work_list):
-                split_assignments.append(split)
-                idx += 1
-
-    # ── Geração ──
-    print(f"\n>> Gerando {len(work_list):,} imagens sintéticas...")
-    t0 = time.time()
-    stats = {s: {"generated": 0, "failed": 0, "objects": 0} for s in split_plan}
-    total_gen = 0
-    print_every = max(100, len(work_list) // 20)
-
-    # Cache de imagens CITRA-3D (evita reler do Drive repetidamente)
-    bg_cache: dict[str, np.ndarray] = {}
-    CACHE_MAX = 200  # mantém até 200 imagens em memória
-
-    for i, (citra_img, var_idx) in enumerate(work_list):
-        split = split_assignments[i] if i < len(split_assignments) else "train"
-        image_id = citra_img["image_id"]
-
-        # Carrega imagem de fundo (com cache)
-        if image_id not in bg_cache:
-            try:
-                bg = np.array(Image.open(citra_img["image_path"]).convert("RGB"))
-                if len(bg_cache) < CACHE_MAX:
-                    bg_cache[image_id] = bg
-            except Exception:
-                stats[split]["failed"] += 1
-                continue
-        else:
-            bg = bg_cache[image_id]
-
-        # Compõe variação
-        canvas = compose_one_variation(
-            bg, citra_img["labels"], crop_pool, args.crops_dir, rng, args.img_size
+        region = bg_arr[px_y:px_y+actual_h, px_x:px_x+actual_w]
+        bg_arr[px_y:px_y+actual_h, px_x:px_x+actual_w] = (
+            rgb[:actual_h, :actual_w] * alpha[:actual_h, :actual_w] +
+            region * (1 - alpha[:actual_h, :actual_w])
         )
+        n_placed += 1
+    
+    result = Image.fromarray(bg_arr.astype(np.uint8))
+    return result, n_placed
 
-        if canvas is None:
-            stats[split]["failed"] += 1
+
+def process_split(split_name, citra_root, crops_pool, output_dir, 
+                  n_variations, rng, img_size=640):
+    """
+    Gera variações sintéticas para UM split, usando apenas
+    imagens desse split como fundo.
+    """
+    img_dir = citra_root / split_name / "images"
+    # Tenta labels_single_class primeiro, depois labels
+    lbl_dir = citra_root / split_name / "labels_single_class"
+    if not lbl_dir.exists():
+        lbl_dir = citra_root / split_name / "labels"
+    
+    out_img = output_dir / split_name / "images"
+    out_lbl = output_dir / split_name / "labels"
+    out_img.mkdir(parents=True, exist_ok=True)
+    out_lbl.mkdir(parents=True, exist_ok=True)
+    
+    images = sorted(img_dir.glob("*.jpg")) + sorted(img_dir.glob("*.png"))
+    print(f"\n  Split '{split_name}': {len(images)} imagens fonte")
+    
+    n_generated = 0
+    n_objects = 0
+    n_failed = 0
+    
+    for img_path in images:
+        stem = img_path.stem
+        label_path = lbl_dir / f"{stem}.txt"
+        bboxes = read_labels(label_path)
+        
+        if not bboxes:
             continue
+        
+        for var_idx in range(n_variations):
+            out_name = f"synth_{stem}_v{var_idx:02d}"
+            out_img_path = out_img / f"{out_name}.jpg"
+            out_lbl_path = out_lbl / f"{out_name}.txt"
+            
+            # Skip se já existe (retomada)
+            if out_img_path.exists() and out_lbl_path.exists():
+                n_generated += 1
+                n_objects += len(bboxes)
+                continue
+            
+            try:
+                result, placed = compose_image(
+                    img_path, bboxes, crops_pool, rng, img_size
+                )
+                result.save(out_img_path, quality=95)
+                
+                # Labels idênticos aos originais
+                with open(out_lbl_path, "w") as f:
+                    for cls, xc, yc, w, h in bboxes:
+                        f.write(f"{cls} {xc:.6f} {yc:.6f} {w:.6f} {h:.6f}\n")
+                
+                n_generated += 1
+                n_objects += placed
+            except Exception as e:
+                n_failed += 1
+                print(f"    ERRO: {out_name}: {e}")
+    
+    print(f"    Geradas: {n_generated:,} | Objetos: {n_objects:,} | Falhas: {n_failed}")
+    return {"generated": n_generated, "objects": n_objects, "failed": n_failed}
 
-        # Salva imagem
-        img_name = f"synth_{image_id}_v{var_idx:02d}"
-        img_path = args.output / split / "images" / f"{img_name}.jpg"
-        Image.fromarray(canvas).save(img_path, "JPEG", quality=90)
 
-        # Salva label (idêntico ao original — mesmas posições)
-        label_path = args.output / split / "labels" / f"{img_name}.txt"
-        with open(label_path, "w") as f:
-            for lbl in citra_img["labels"]:
-                # Reescreve como classe 0 (single-class)
-                f.write(f"0 {lbl[1]:.6f} {lbl[2]:.6f} "
-                        f"{lbl[3]:.6f} {lbl[4]:.6f}\n")
+# ═══════════════════════════════════════════════════════════════════
+# MAIN
+# ═══════════════════════════════════════════════════════════════════
 
-        stats[split]["generated"] += 1
-        stats[split]["objects"] += citra_img["n_objects"]
-        total_gen += 1
-
-        if (i + 1) % print_every == 0:
-            elapsed = time.time() - t0
-            rate = (i + 1) / elapsed if elapsed > 0 else 0
-            print(f"   [{i+1:>6,}/{len(work_list):,}] "
-                  f"gen={total_gen:,} | {rate:.1f} img/s")
-
-    elapsed_total = time.time() - t0
-
-    # ── Preview ──
-    if args.preview:
-        try:
-            import cv2
-            preview_dir = args.output / "preview"
-            preview_dir.mkdir(exist_ok=True)
-            train_imgs = sorted((args.output / "train" / "images").glob("*.jpg"))[:10]
-            for img_path in train_imgs:
-                img = cv2.imread(str(img_path))
-                lbl_path = args.output / "train" / "labels" / f"{img_path.stem}.txt"
-                if lbl_path.exists():
-                    for line in open(lbl_path):
-                        p = line.strip().split()
-                        if len(p) >= 5:
-                            xc = float(p[1]) * args.img_size
-                            yc = float(p[2]) * args.img_size
-                            w = float(p[3]) * args.img_size
-                            h = float(p[4]) * args.img_size
-                            cv2.rectangle(img,
-                                          (int(xc - w / 2), int(yc - h / 2)),
-                                          (int(xc + w / 2), int(yc + h / 2)),
-                                          (0, 255, 0), 2)
-                cv2.imwrite(str(preview_dir / img_path.name), img)
-            print(f"\n   ✓ {len(train_imgs)} previews em {preview_dir}")
-        except ImportError:
-            print(f"\n   ⚠ cv2 indisponível para preview")
-
-    # ── data.yaml ──
-    yaml_content = f"""# Dataset sintético v3 — Substituição In-Place
-# Fundos: CITRA-3D-Real (posições e escalas reais preservadas)
-# Navios: crops InaTechShips (SAM segmentation)
-# Cada imagem é uma variação de um fundo CITRA-3D com navios diferentes
-path: {args.output}
-train: train/images
-val: val/images
-test: test/images
-nc: 1
-names:
-  - embarcacao
-"""
-    (args.output / "data_single_class.yaml").write_text(yaml_content)
-
-    # ── Relatório ──
-    total_objects = sum(s["objects"] for s in stats.values())
+def main():
+    print("=" * 70)
+    print("  GERAÇÃO DE DATASET SINTÉTICO v4 (splits isolados)")
+    print("=" * 70)
+    
+    # Limpa saída anterior se existir
+    if OUTPUT_DIR.exists():
+        print(f"  Removendo {OUTPUT_DIR}...")
+        shutil.rmtree(OUTPUT_DIR)
+    
+    rng = random.Random(SEED)
+    np.random.seed(SEED)
+    
+    # Carrega crops
+    print("\n  Carregando pool de crops...")
+    crops_pool = load_crops_pool(CROPS_DIR, CROPS_META)
+    
+    t0 = time.time()
     report = {
-        "generated_at": datetime.now().isoformat(),
-        "version": "v3_in_place_substitution",
-        "seed": args.seed,
-        "img_size": args.img_size,
-        "n_citra_images": n_citra,
-        "n_citra_bboxes": total_bboxes,
-        "n_variations_per_image": n_variations,
-        "n_images_total": total_gen,
-        "n_objects_total": total_objects,
-        "avg_objects_per_image": round(total_objects / total_gen, 2) if total_gen else 0,
-        "splits": stats,
-        "crops_pool_size": len(crop_pool),
-        "elapsed_seconds": elapsed_total,
-        "elapsed_human": f"{elapsed_total / 60:.1f} min",
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "version": "v4_split_isolated",
+        "seed": SEED,
+        "img_size": IMG_SIZE,
+        "n_variations_per_image": N_VARIATIONS,
+        "crops_pool_size": len(crops_pool),
+        "split_isolation": "Each synthetic split generated ONLY from "
+                            "the corresponding CITRA-3D-Real split. "
+                            "No test backgrounds in synthetic train.",
+        "splits": {}
     }
-
-    report_path = args.output / "composicao_report.json"
-    report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False))
-
-    # ── Sumário ──
-    print(f"\n{'=' * 72}")
-    print(f"  CONCLUÍDO (v3 — substituição in-place)")
-    print(f"{'=' * 72}")
-    print(f"  Fundos CITRA-3D:    {n_citra:,} imagens × {n_variations} variações")
-    print(f"  Imagens geradas:    {total_gen:,}")
-    print(f"  Objetos totais:     {total_objects:,}")
-    if total_gen > 0:
-        print(f"  Obj/imagem médio:   {total_objects / total_gen:.1f}")
-    print(f"  Tempo:              {elapsed_total / 60:.1f} min")
-    print(f"  Por split:")
-    for s, st in stats.items():
-        print(f"    {s}: {st['generated']:,} imgs, {st['objects']:,} objs")
-    print(f"  Saída:              {args.output}")
-    print(f"  Relatório:          {report_path}")
-    print(f"{'=' * 72}")
+    
+    total_imgs = 0
+    total_objs = 0
+    
+    for split in ("train", "val", "test"):
+        result = process_split(
+            split, CITRA_ROOT, crops_pool, OUTPUT_DIR,
+            N_VARIATIONS, rng, IMG_SIZE
+        )
+        report["splits"][split] = result
+        total_imgs += result["generated"]
+        total_objs += result["objects"]
+    
+    elapsed = time.time() - t0
+    report["n_images_total"] = total_imgs
+    report["n_objects_total"] = total_objs
+    report["avg_objects_per_image"] = round(total_objs / max(total_imgs, 1), 2)
+    report["elapsed_seconds"] = elapsed
+    report["elapsed_human"] = f"{elapsed/60:.1f} min"
+    
+    # Verifica que splits estão corretos
+    print(f"\n{'=' * 70}")
+    print(f"  CONCLUÍDO (v4 — splits isolados)")
+    print(f"{'=' * 70}")
+    print(f"  Imagens geradas:    {total_imgs:,}")
+    print(f"  Objetos totais:     {total_objs:,}")
+    print(f"  Obj/imagem médio:   {report['avg_objects_per_image']}")
+    print(f"  Tempo:              {report['elapsed_human']}")
+    print(f"\n  Por split (cada um gerado do split CORRESPONDENTE):")
+    for split, r in report["splits"].items():
+        print(f"    {split}: {r['generated']:,} imgs, {r['objects']:,} objs")
+    
+    # Verifica proporções
+    if total_imgs > 0:
+        for split in ("train", "val", "test"):
+            pct = report["splits"][split]["generated"] / total_imgs * 100
+            print(f"    {split}: {pct:.1f}%")
+    
+    # Salva relatório
+    report_path = OUTPUT_DIR / "composicao_report_v4.json"
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=2)
+    print(f"\n  Relatório: {report_path}")
+    print(f"{'=' * 70}")
 
 
 if __name__ == "__main__":

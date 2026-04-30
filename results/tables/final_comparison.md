@@ -1,39 +1,27 @@
 # Final Comparison — All Experimental Arms
 
-> **Note:** A' v4 results and B (3 seeds) pending. v3 results deprecated due to data leakage.
-
 ## Main Results (test set, CITRA-3D-Real)
 
-| Rank | Arm | Pipeline | mAP50 | mAP50-95 | Δ mAP50 vs B2 | Seeds |
-|------|-----|----------|-------|----------|---------------|-------|
-| **1** | **A' (synthetic v4)** | **COCO → synthetic → CITRA-3D** | **TBD** | **TBD** | **TBD** | 3 |
-| 2 | B2 (baseline) | COCO → CITRA-3D | 0.8351 ± 0.0024 | 0.5055 ± 0.0027 | ref | 3 |
-| 3 | B1 (baseline) | Random init → CITRA-3D | 0.8008 ± 0.0073 | 0.4742 ± 0.0008 | −3.43% | 3 |
-| 4 | B (random) | COCO → random pool → CITRA-3D | TBD (3 seeds) | TBD | TBD | 3 |
-| 5 | A (curated) | COCO → InaTechShips → CITRA-3D | 0.7936 ± 0.0060 | 0.4692 ± 0.0021 | −4.15% | 3 |
+| Rank | Arm | Pipeline | mAP50 | mAP50-95 | P | R | F1 | Δ vs B2 |
+|------|-----|----------|-------|----------|---|---|----|----|
+| **1** | **A' joint balanced** | **COCO → real+synth balanced** | **0.8451 ± 0.0033** | **0.5206 ± 0.0017** | **0.857** | **0.805** | **0.830** | **+1.00 pp** |
+| 2 | B2 (baseline) | COCO → CITRA-3D | 0.8351 ± 0.0020 | 0.5055 ± 0.0022 | 0.857 | 0.783 | 0.818 | ref |
+| 3 | A' frozen backbone | COCO → synth (freeze) → CITRA-3D | 0.8342 ± 0.0039 | 0.5074 ± 0.0035 | 0.855 | 0.774 | 0.812 | −0.09 pp |
+| 3 | Synthetic 20ep | COCO → synth (20ep) → CITRA-3D | 0.8344 ± 0.0033 | 0.5011 ± 0.0065 | 0.855 | 0.773 | 0.812 | −0.08 pp |
+| 5 | A' sequential (100ep) | COCO → synth (100ep) → CITRA-3D | 0.8221 ± 0.0085 | 0.4933 ± 0.0059 | 0.828 | 0.769 | 0.797 | −1.31 pp |
+| 6 | B1 (baseline) | Random → CITRA-3D | 0.8008 ± 0.0061 | 0.4742 ± 0.0006 | 0.829 | 0.750 | 0.787 | −3.43 pp |
+| 7 | B (random) | COCO → random pool → CITRA-3D | 0.7945 ± 0.0046 | 0.4728 ± 0.0045 | 0.858 | 0.742 | 0.796 | −4.06 pp |
+| 8 | A (curated) | COCO → InaTechShips → CITRA-3D | 0.7936 ± 0.0049 | 0.4692 ± 0.0017 | 0.834 | 0.735 | 0.781 | −4.15 pp |
 
-## Deprecated v3 Results (data leakage — DO NOT USE)
+## Ablation: Pre-training Epochs on InaTechShips Direct (seed 42)
 
-| Arm | mAP50 | Note |
-|-----|-------|------|
-| A' v3 | 0.8541 ± 0.0043 | **INVALIDATED** — synthetic train contained test backgrounds |
-
-## Data Integrity (v4)
-
-- Synthetic train generated ONLY from CITRA-3D-Real train (1,348 × 13 = 17,524 images)
-- Synthetic val generated ONLY from CITRA-3D-Real val (332 × 13 = 4,316 images)
-- Synthetic test generated ONLY from CITRA-3D-Real test (401 × 13 = 5,213 images)
-- Total: 27,053 images, 91,035 objects, 3.37 obj/img
-
-## Ablation: Pre-training Epochs (seed 42)
-
-| Pre-training epochs | mAP50 | Δ vs B2 |
-|---------------------|-------|---------|
-| 0 (B2 baseline) | 0.8351 | ref |
-| 10 | 0.8200 | −1.51% |
-| 20 | 0.8171 | −1.80% |
-| 50 | 0.8037 | −3.14% |
-| 100 (arm A) | 0.8006 | −3.45% |
+| Epochs | mAP50 | Δ vs B2 |
+|--------|-------|---------|
+| 0 (B2) | 0.8351 | ref |
+| 10 | 0.8200 | −1.51 pp |
+| 20 | 0.8171 | −1.80 pp |
+| 50 | 0.8037 | −3.14 pp |
+| 100 | 0.8006 | −3.45 pp |
 
 ## Dataset Statistics
 
@@ -42,4 +30,4 @@
 | CITRA-3D-Real | 2,081 | 7,003 | 3.37 |
 | dataset_25k_v2 (curated) | 27,796 | ~27,796 | ~1.0 |
 | random_pool_v2 | 27,964 | — | ~1.0 |
-| dataset_sintetico_v4 | 27,053 | 91,035 | 3.37 |
+| Synthetic (in-place) | 27,053 | 91,035 | 3.37 |

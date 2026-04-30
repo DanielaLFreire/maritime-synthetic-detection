@@ -1,32 +1,31 @@
 {
-  "generated_at": "2026-04-25T11:28:21.788570",
-  "version": "v3_in_place_substitution",
+  "generated_at": "2026-04-27T08:37:42",
+  "version": "v4_split_isolated",
   "seed": 42,
   "img_size": 640,
-  "n_citra_images": 2081,
-  "n_citra_bboxes": 7003,
   "n_variations_per_image": 13,
-  "n_images_total": 27796,
-  "n_objects_total": 93480,
-  "avg_objects_per_image": 3.36,
+  "crops_pool_size": 27796,
+  "data_leakage_fix": "Each synthetic split generated ONLY from the corresponding CITRA-3D-Real split. No test backgrounds in synthetic train.",
   "splits": {
     "train": {
-      "generated": 16678,
-      "failed": 0,
-      "objects": 56363
+      "generated": 17524,
+      "objects": 58354,
+      "failed": 0
     },
     "val": {
-      "generated": 5559,
-      "failed": 0,
-      "objects": 18527
+      "generated": 4316,
+      "objects": 16470,
+      "failed": 0
     },
     "test": {
-      "generated": 5559,
-      "failed": 0,
-      "objects": 18590
+      "generated": 5213,
+      "objects": 16211,
+      "failed": 0
     }
   },
-  "crops_pool_size": 23828,
-  "elapsed_seconds": 22250.12330675125,
-  "elapsed_human": "370.8 min"
+  "n_images_total": 27053,
+  "n_objects_total": 91035,
+  "avg_objects_per_image": 3.37,
+  "elapsed_seconds": 15647.20969748497,
+  "elapsed_human": "260.8 min"
 }

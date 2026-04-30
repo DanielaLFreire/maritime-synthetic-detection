@@ -1,0 +1,32 @@
+# braco_balanced.yaml
+# Joint balanced training (50/50 real + synthetic) — MAIN RESULT
+
+name: "A' joint — Balanced joint training"
+description: >
+  Train on CITRA-3D-Real + synthetic combined in a single run.
+  Real images oversampled 13× to balance with synthetic variations.
+  No sequential pre-training — avoids catastrophic forgetting.
+pipeline: "COCO → (CITRA-3D-Real×13 + synthetic) balanced"
+
+training:
+  data: "combined_balanced (50% real, 50% synthetic)"
+  real_images: 17524
+  synthetic_images: 17524
+  total: 35048
+  epochs: 300
+  patience: 30
+
+seeds: [42, 123, 2024]
+
+results:
+  per_seed:
+    seed_42:   { mAP50: 0.8496, mAP50_95: 0.5216 }
+    seed_123:  { mAP50: 0.8439, mAP50_95: 0.5219 }
+    seed_2024: { mAP50: 0.8417, mAP50_95: 0.5181 }
+  mean:
+    mAP50: "0.8451 ± 0.0033"
+    mAP50_95: "0.5206 ± 0.0017"
+    Precision: 0.857
+    Recall: 0.805
+    F1: 0.830
+  delta_vs_B2: "+1.00 pp"
