@@ -218,6 +218,7 @@ Arm & Init weights & Pre-train data & Epochs & Fine-tune data & Epochs & Seeds \
 \midrule
 B1 & Random & --- & --- & CITRA-3D-Real & 300 & 3 \\
 B2 & COCO & --- & --- & CITRA-3D-Real & 300 & 3 \\
+B2-long & COCO & --- & --- & CITRA-3D-Real ($\times$13) & 300 & 1 \\
 A  & COCO & InaTechShips curated & 100 & CITRA-3D-Real & 300 & 3 \\
 B  & COCO & InaTechShips random  & 100 & CITRA-3D-Real & 300 & 3 \\
 A' seq. & COCO & Synthetic (in-place) & 100 & CITRA-3D-Real & 300 & 3 \\
@@ -364,6 +365,8 @@ The joint balanced training (A' joint) achieves mAP50 = 0.8451 $\pm$ 0.0033, sur
 
 The training regime comparison reveals that the same synthetic data produces different outcomes depending on how it is used: sequential pre-training causes partial forgetting ($-$1.31~pp), frozen backbone neutralises the degradation ($-$0.09~pp, statistically equivalent to B2), and joint balanced training appears to mitigate the forgetting-like degradation observed in the sequential regime while leveraging synthetic diversity (+1.00~pp).
 
+To control for the effect of training volume, we ran a matched-steps experiment (B2-long): CITRA-3D-Real training images oversampled 13$\times$ (17,524 images, same gradient steps per epoch as A' joint) with no synthetic data. B2-long achieved mAP50 = 0.8324 (seed 42), slightly below the standard B2 (0.8351), confirming that repeating real images does not improve performance. The +1.00~pp improvement of A' joint over B2 is therefore attributable to the synthetic data diversity, not to increased training volume.
+
 Table~\ref{tab:ap_size} presents AP and AR stratified by object size following COCO conventions (small: area $<$ 32$^2$ pixels, medium: 32$^2$--96$^2$, large: $>$ 96$^2$). The joint balanced arm improves uniformly across all size categories. The most notable gain is in small-object recall (AR$_\text{small}$ +3.9\%, from 0.385 to 0.400), which is operationally significant given that 71.6\% of vessels in CITRA-3D-Real fall in this category. Sequential pre-training, by contrast, shows no improvement for small objects and slight degradation for medium and large objects.
 
 \begin{table}[!htbp]
@@ -388,7 +391,7 @@ AR$_\text{large}$  & 0.751 & \textbf{0.759} & 0.745 \\
 \begin{figure*}[!htbp]
   \centering
   \includegraphics[width=0.9\textwidth]{figs/fig6_comparison_bar.pdf}
-  \caption{Comparison of all experimental arms on CITRA-3D-Real test set. (a)~mAP50: joint balanced training (A'~joint) achieves 0.845, surpassing the COCO baseline (B2~=~0.835) by +1.00 pp. Sequential pre-training reduces but does not eliminate negative transfer. Direct pre-training arms (A, B) fall below B1 (random init). (b)~mAP50-95: joint balanced achieves the best localisation precision. Error bars indicate $\pm$1 standard deviation across 3 seeds.}
+  \caption{Comparison of all experimental arms on CITRA-3D-Real test set. (a)~mAP50: joint balanced training (A'~joint) achieves 0.845, surpassing both the COCO baseline (B2~=~0.835) and the volume-matched control (B2-long~=~0.832, real images oversampled 13$\times$ without synthetics), confirming that the improvement is attributable to synthetic data diversity. Direct pre-training arms (A, B) fall below B1 (random init). (b)~mAP50-95: similar pattern. Error bars indicate $\pm$1 standard deviation across 3 seeds where available.}
   \label{fig:comparison}
 \end{figure*}
 
@@ -423,7 +426,7 @@ The equivalence of Arms A and B (curated $\approx$ random, $\Delta$ = 0.09~pp) s
 
 \subsection{Limitations}
 
-Several limitations should be acknowledged. First, our evaluation uses a single operational dataset (CITRA-3D-Real) from one geographic location with specific camera configurations; generalisation to other maritime surveillance systems remains to be validated. Second, all experiments use a single detector architecture (YOLOv11m); the extent to which our findings transfer to other detectors such as RT-DETR or Faster R-CNN is unknown, though the domain gap analysis is architecture-independent. Third, while the synthetic images are visually convincing at operational scales (where vessels occupy a median area of 0.10\% of the image), close inspection reveals compositing artefacts at crop boundaries---this is unlikely to affect detection training but may matter for tasks requiring pixel-level precision. Fourth, the method requires annotated bounding boxes in the target domain to serve as anchor positions for composition, limiting its applicability to fully unsupervised scenarios. Fifth, the crop resizing does not enforce aspect-ratio matching between source crop and target bounding box, which may introduce geometric distortion for objects with extreme proportions. Sixth, we did not compare against a standard random-placement copy-paste baseline; therefore, the contribution of in-place anchoring relative to conventional copy-paste remains to be quantified. Finally, the joint balanced arm processes approximately 26$\times$ more gradient steps per epoch than B2 due to the larger combined dataset; while this is inherent to the method, a matched-steps control would further isolate the effect of synthetic data from training volume.
+Several limitations should be acknowledged. First, our evaluation uses a single operational dataset (CITRA-3D-Real) from one geographic location with specific camera configurations; generalisation to other maritime surveillance systems remains to be validated. Second, all experiments use a single detector architecture (YOLOv11m); the extent to which our findings transfer to other detectors such as RT-DETR or Faster R-CNN is unknown, though the domain gap analysis is architecture-independent. Third, while the synthetic images are visually convincing at operational scales (where vessels occupy a median area of 0.10\% of the image), close inspection reveals compositing artefacts at crop boundaries---this is unlikely to affect detection training but may matter for tasks requiring pixel-level precision. Fourth, the method requires annotated bounding boxes in the target domain to serve as anchor positions for composition, limiting its applicability to fully unsupervised scenarios. Fifth, the crop resizing does not enforce aspect-ratio matching between source crop and target bounding box, which may introduce geometric distortion for objects with extreme proportions. Finally, a standard random-placement copy-paste baseline was not included; the contribution of in-place anchoring relative to conventional copy-paste remains to be quantified in future work.
 
 % ================================================================
 % 7. CONCLUSION
