@@ -20,7 +20,7 @@ Use as figuras disponíveis nos slides indicados (referência aos PDFs do reposi
 - Detector: YOLOv11m, detecção single-class ("embarcação")
 - O sistema de detecção faz parte de uma solução maior de vigilância marítima
 
-**Estrutura da apresentação (15-18 slides):**
+**Estrutura da apresentação (20 slides):**
 
 ### SLIDE 1 — Capa
 Título: "Como usar imagens públicas de navios para melhorar nosso sistema de detecção"
@@ -125,39 +125,65 @@ Confirmado com 3 seeds independentes. Intervalos de confiança não se sobrepõe
 
 **[Usar: fig6_comparison_bar.pdf — gráfico de barras com todos os braços]**
 
-### SLIDE 13 — O Ganho Mais Importante: Recall
+### SLIDE 13 — Prova: O Ganho Vem das Sintéticas, Não do Volume
+Para garantir que a melhoria não é simplesmente efeito de treinar mais tempo:
+- B2-long: mesmas imagens reais repetidas 13× (17.524 imgs), sem sintéticas, mesmos gradient steps
+- Resultado: mAP50 = 0.832 — **pior** que B2 normal (0.835)
+
+| Estratégia | Imagens treino | mAP50 |
+|---|---|---|
+| B2 (normal) | 1.348 reais | 0.835 |
+| B2-long (13× oversampled) | 17.524 reais | 0.832 |
+| **A' joint (50/50)** | **17.524 reais + 17.524 sint.** | **0.845** |
+
+Mensagem: repetir imagens reais não ajuda. O ganho de +1,00 pp vem inteiramente da **diversidade visual das sintéticas**.
+
+### SLIDE 14 — O Ganho Mais Importante: Recall
 - Recall subiu de 0.783 para 0.805 (+2,8%)
 - Isso significa: o detector encontra MAIS navios na cena
 - Precision se manteve em 0.857 — não aumentou falsos alarmes
 - Para vigilância marítima, perder um navio (falso negativo) é mais grave que um alarme falso
 
-### SLIDE 14 — O Que Aprendemos (Contribuição para o Projeto)
+### SLIDE 15 — Melhoria em Todas as Escalas
+AP e AR por tamanho de objeto (padrão COCO):
+| Métrica | B2 | A' joint | Δ |
+|---|---|---|---|
+| AP small (71.6% dos objetos) | 0.255 | **0.262** | +2.9% |
+| AP medium | 0.571 | **0.576** | +0.9% |
+| AP large | 0.679 | **0.691** | +1.7% |
+| AR small | 0.385 | **0.400** | +3.9% |
+
+Mensagem: a melhoria é uniforme — não vem só de objetos grandes. O maior ganho (+3.9% AR) é nos objetos pequenos, que são a maioria do dataset.
+
+### SLIDE 16 — O Que Aprendemos (Contribuição para o Projeto)
 1. **Imagens públicas são úteis, mas precisam de adaptação.** Usar direto piora. Adaptar e treinar junto melhora.
 2. **O regime de treino importa tanto quanto os dados.** Sequencial causa esquecimento. Treino conjunto preserva o conhecimento.
-3. **Similaridade visual não garante compatibilidade.** CLIP diz que são parecidas, mas o detector discorda. Escala, densidade e contexto são os fatores reais.
+3. **O ganho vem da diversidade, não do volume.** Repetir dados reais não ajuda (B2-long). Sintéticas adicionam aparências novas.
 4. **Podemos melhorar o detector sem coletar mais dados operacionais.** As 28 mil imagens públicas, quando adaptadas, complementam nossas 2.081 imagens.
 
-### SLIDE 15 — Impacto Prático para o Sistema
+### SLIDE 17 — Impacto Prático para o Sistema
 Como isso melhora o sistema que estamos desenvolvendo:
 - **Mais detecções corretas** em cenários com múltiplos navios distantes
 - **Sem custo adicional de coleta** — usamos dados públicos existentes
-- **Pipeline reprodutível** — pode ser reaplicado quando novos dados do InaTechShips ou de outras fontes surgirem
-- **Código aberto** — todos os scripts estão no GitHub, prontos para integrar no pipeline de treino do projeto
+- **Pipeline reprodutível** — pode ser reaplicado quando novos dados surgirem
+- **Código aberto** — todos os scripts estão no GitHub
 
-### SLIDE 16 — Comparação Completa
+### SLIDE 18 — Comparação Completa
 Tabela com todos os experimentos:
 | Estratégia | mAP50 | Δ |
 |---|---|---|
 | Treino conjunto (50/50) | 0.845 ± 0.003 | +1,00 |
 | Backbone congelado | 0.834 ± 0.004 | −0,09 |
-| Sequencial 20 épocas | 0.834 ± 0.003 | −0,08 |
 | Baseline COCO | 0.835 ± 0.002 | ref |
+| B2-long (volume ctrl) | 0.832 | −0,27 |
 | Sequencial 100 épocas | 0.822 ± 0.009 | −1,31 |
 | Sem pré-treino | 0.801 ± 0.006 | −3,43 |
 | InaTechShips aleatório | 0.795 ± 0.005 | −4,06 |
 | InaTechShips curado | 0.794 ± 0.005 | −4,15 |
 
-### SLIDE 17 — Próximos Passos
+**[Usar: fig6_comparison_bar.pdf — gráfico de barras com 8 braços incluindo B2-long]**
+
+### SLIDE 19 — Próximos Passos
 Para o sistema:
 - Integrar o treino conjunto no pipeline de atualização do detector
 - Testar com novos dados operacionais quando disponíveis
@@ -168,7 +194,7 @@ Para validação científica:
 - Submeter artigo para Ocean Engineering para validar a proposta com revisores especializados e receber feedback da comunidade
 - Repositório público para reprodutibilidade
 
-### SLIDE 18 — Discussão
+### SLIDE 20 — Discussão
 - Dúvidas?
 - Sugestões para o próximo ciclo de experimentos?
 

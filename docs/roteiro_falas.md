@@ -145,19 +145,39 @@ Pode parecer pouco — 1 ponto — mas lembre que todas as outras tentativas **p
 
 ---
 
-## SLIDE 13 — O Ganho Mais Importante: Recall
-*[~1.5 min | Traduz para impacto operacional]*
+## SLIDE 13 — Prova: O Ganho Vem das Sintéticas
+*[~2 min | Argumento decisivo]*
 
 **Fala:**
-"Mas o número que mais importa para o nosso sistema não é o mAP50. É o **Recall**.
+"Uma pergunta natural é: será que a melhoria vem simplesmente de treinar com mais imagens, não das sintéticas em si? Para responder, fizemos um controle: treinamos com as mesmas imagens reais repetidas 13 vezes — o B2-long. Mesma quantidade de gradient steps que o treino conjunto.
 
-O Recall subiu de 0,783 para 0,805 — um aumento de quase 3%. O que isso significa na prática? O detector encontra **mais navios** na cena. A Precision se manteve em 0,857, então ele não está gerando mais alarmes falsos — está genuinamente detectando embarcações que antes passavam despercebidas.
+Resultado: B2-long deu mAP50 de 0,832 — **pior** que o B2 normal com 0,835. Repetir imagens reais não ajuda, o modelo já saturou.
 
-Para vigilância marítima, isso é o que importa. Um falso negativo — um navio que não foi detectado — é mais grave do que um falso positivo. Esse ganho de Recall é diretamente útil para o sistema."
+Mas quando metade dessas imagens são sintéticas, o mAP50 sobe para 0,845. Isso confirma que o ganho vem da **diversidade visual** que as sintéticas trazem — tipos de navio que o modelo nunca viu nas 1.348 imagens reais."
 
 ---
 
-## SLIDE 14 — O Que Aprendemos
+## SLIDE 14 — O Ganho Mais Importante: Recall
+*[~1.5 min | Traduz para impacto operacional]*
+
+**Fala:**
+"O número que mais importa para o nosso sistema é o Recall. Subiu de 0,783 para 0,805 — quase 3% a mais. O detector encontra mais navios na cena. E a Precision se manteve em 0,857 — não gera mais alarmes falsos.
+
+Para vigilância marítima, um navio não detectado é mais grave que um alarme falso. Esse ganho de Recall é diretamente útil."
+
+---
+
+## SLIDE 15 — Melhoria em Todas as Escalas
+*[~1 min | Responde a pergunta "funciona para objetos pequenos?"]*
+
+**Fala:**
+"Uma preocupação era se a melhoria vinha só de objetos grandes, que são mais fáceis. Analisamos AP e AR por tamanho de objeto no padrão COCO.
+
+O resultado: a melhoria é uniforme. O maior ganho é justamente nos objetos pequenos — AR small sobe 3,9%. E 71,6% dos nossos objetos são small. Ou seja, o treino conjunto melhora exatamente onde mais precisamos."
+
+---
+
+## SLIDE 16 — O Que Aprendemos
 *[~2 min | Lições consolidadas]*
 
 **Fala:**
@@ -173,7 +193,7 @@ Para vigilância marítima, isso é o que importa. Um falso negativo — um navi
 
 ---
 
-## SLIDE 15 — Impacto Prático para o Sistema
+## SLIDE 17 — Impacto Prático para o Sistema
 *[~1.5 min | Conecta ao projeto — slide que o supervisor mais valoriza]*
 
 **Fala:**
@@ -189,7 +209,7 @@ E quarto: **todo o código está pronto**. São 22 scripts organizados em 6 etap
 
 ---
 
-## SLIDE 16 — Comparação Completa
+## SLIDE 18 — Comparação Completa
 *[~1 min | Referência rápida, não precisa detalhar tudo]*
 
 **Fala:**
@@ -197,7 +217,7 @@ E quarto: **todo o código está pronto**. São 22 scripts organizados em 6 etap
 
 ---
 
-## SLIDE 17 — Próximos Passos
+## SLIDE 19 — Próximos Passos
 *[~1.5 min]*
 
 **Fala:**
@@ -209,7 +229,7 @@ E como passo de validação científica, preparamos um artigo para a Ocean Engin
 
 ---
 
-## SLIDE 18 — Discussão
+## SLIDE 20 — Discussão
 *[Aberto]*
 
 **Fala:**
