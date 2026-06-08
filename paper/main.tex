@@ -17,6 +17,8 @@
 
 \usepackage{subcaption}
 
+\usepackage{float}
+
 \usepackage{hyperref}
 \setlength{\emergencystretch}{3em}
 
@@ -77,7 +79,7 @@
 % ABSTRACT
 % ================================================================
 \begin{abstract}
-Operational maritime vessel detection systems require large annotated datasets for training, yet surveillance data from coastal and port-monitoring systems are often scarce and difficult to annotate. Public ship image datasets offer a potential solution, but their direct use as pre-training data may not transfer effectively to operational conditions. This paper investigates how to leverage the InaTechShips dataset ($\sim$28,000 public ship images) to improve YOLOv11m-based vessel detection on the CITRA-3D-Real dataset (2,081 operational maritime surveillance images). We first show that direct transfer learning from InaTechShips causes \emph{negative transfer}, reducing mean average precision at IoU~0.5 (mAP50) by 4.15 percentage points (pp) compared to a COCO-pretrained baseline, due to a structural domain gap in scale (ships occupy $\sim$80\% vs $\sim$3\% of the image), object density (1 vs 3.37 objects per image), and capture conditions. A seed-42 epoch ablation shows monotonic degradation with increasing pre-training exposure. We then propose \emph{in-place synthetic composition}: vessel crops segmented with SAM from public ship images are resized and placed at the exact positions of real vessels in operational scenes. Sequential pre-training on these synthetic images reduces but does not eliminate the negative transfer ($-$1.31~pp). However, \emph{balanced joint training}---combining real and synthetic images in equal proportions within the same training run---achieves mAP50 of 0.8451 $\pm$ 0.0033, improving over the COCO baseline (0.8351 $\pm$ 0.0020) by 1.00 percentage point across the tested seeds, while also increasing Recall from 0.783 to 0.805 (+2.2 percentage points). These results suggest that data adaptation and training regime jointly determine whether positive transfer is achieved: domain-aware synthetic composition combined with balanced joint training can help make public ship imagery useful for operational maritime surveillance.
+Operational maritime vessel detection systems require large annotated datasets for training, yet surveillance data from coastal and port-monitoring systems are often scarce and difficult to annotate. Public ship image datasets offer a potential solution, but their direct use as pre-training data may not transfer effectively to operational conditions. This paper investigates how to leverage the InaTechShips dataset ($\sim$28,000 public ship images) to improve YOLOv11m-based vessel detection on the CITRA-3D-Real dataset (2,081 operational maritime surveillance images). We first show that direct transfer learning from InaTechShips causes \emph{negative transfer}, reducing mean average precision at IoU~0.5 (mAP50) by 4.15 percentage points (pp) compared to a COCO-pretrained baseline, due to a structural domain gap in scale (ships occupy $\sim$80\% vs $\sim$3\% of the image), object density (1 vs 3.37 objects per image), and capture conditions. A seed-42 epoch ablation shows monotonic degradation with increasing pre-training exposure. We then propose \emph{in-place synthetic composition}: vessel crops segmented with SAM from public ship images are resized and placed at the exact positions of real vessels in operational scenes. Sequential pre-training on these synthetic images reduces but does not eliminate the negative transfer ($-$1.31~pp). However, \emph{balanced joint training}---combining real and synthetic images in equal proportions within the same training run---achieves mAP50 of 0.8451 $\pm$ 0.0033, improving over the COCO baseline (0.8351 $\pm$ 0.0020) by 1.00 percentage point across the tested seeds, while also increasing Recall from 0.783 to 0.805 (+2.2 percentage points). A controlled ablation in which synthetic crops are placed at uniformly sampled positions within the sea region (rather than anchored to real vessel positions) reaches statistically equivalent performance, indicating that spatial anchoring acts primarily as a data-hygiene mechanism rather than the main driver of detection accuracy. These results suggest that data adaptation and training regime jointly determine whether positive transfer is achieved: domain-aware synthetic composition combined with balanced joint training can help make public ship imagery useful for operational maritime surveillance.
 \end{abstract}
 
 % ================================================================
@@ -167,7 +169,7 @@ A complementary line of work questions the relationship between visual similarit
 
 Fig.~\ref{fig:composition_process} illustrates both the domain gap and the composition process. InaTechShips contains close-range photographs where vessels occupy $\sim$80\% of the frame (a), while CITRA-3D-Real captures distant vessels at operational scale (c). SAM segmentation isolates vessels with transparent backgrounds (b), which are then resized and composited at the exact positions of real vessels, producing the synthetic training image (d).
 
-\begin{figure*}[!htbp]
+\begin{figure*}[H]
   \centering
   \includegraphics[width=0.8\textwidth]{figs/fig_composition_process.pdf}
   \caption{In-place synthetic composition pipeline. (a)~InaTechShips source. (b)~SAM-segmented crop. (c)~CITRA-3D-Real operational scene. (d)~Synthetic result after in-place substitution.}
@@ -200,7 +202,7 @@ Objects/img & 3.37 & 2.0 & 1.0 & 7.0 & 1 & 40 \\
 
 The dataset is split into training (1,348 images, 4,489 boxes), validation (332 images, 1,267 boxes), and test (401 images, 1,247 boxes) sets.
 
-\begin{figure*}[!htbp]
+\begin{figure*}[H]
   \centering
   \includegraphics[width=0.8\textwidth]{figs/fig3_scale_distribution.pdf}
   \caption{Distribution of normalised bounding-box areas. (a)~CITRA-3D-Real (median 0.10\%). (b)~InaTechShips (median 54\%).}
@@ -301,7 +303,7 @@ Table~\ref{tab:baselines} shows the baseline results. COCO pre-training (B2) pro
 \toprule
 Arm & Pre-training & mAP50 & mAP50-95 \\
 \midrule
-B1 & Random init & 0.8008 $\pm$ 0.0073 & 0.4742 $\pm$ 0.0008 \\
+B1 & Random init & 0.8008 $\pm$ 0.0061 & 0.4742 $\pm$ 0.0006 \\
 \textbf{B2} & \textbf{COCO} & \textbf{0.8351 $\pm$ 0.0020} & \textbf{0.5055 $\pm$ 0.0022} \\
 \bottomrule
 \end{tabular}
@@ -312,14 +314,14 @@ B1 & Random init & 0.8008 $\pm$ 0.0073 & 0.4742 $\pm$ 0.0008 \\
 
 Table~\ref{tab:negative_transfer} presents the central finding: pre-training on InaTechShips images \emph{hurts} detection performance regardless of curation strategy.
 
-\begin{table*}[!htbp]
+\begin{table*}[htbp]
 \caption{Direct pre-training results (mean $\pm$ std, 3 seeds).}\label{tab:negative_transfer}
 \begin{tabular}{@{}llccc@{}}
 \toprule
 Arm & Pre-training data & mAP50 & mAP50-95 & $\Delta$ vs B2 \\
 \midrule
 B2 & COCO (baseline) & 0.8351 $\pm$ 0.0020 & 0.5055 $\pm$ 0.0022 & ref \\
-A & Curated (3 seeds) & 0.7936 $\pm$ 0.0060 & 0.4692 $\pm$ 0.0021 & $-$4.15\% \\
+A & Curated (3 seeds) & 0.7936 $\pm$ 0.0049 & 0.4692 $\pm$ 0.0017 & $-$4.15\% \\
 B & Random (3 seeds) & 0.7945 $\pm$ 0.0046 & 0.4728 $\pm$ 0.0045 & $-$4.06\% \\
 \bottomrule
 \end{tabular}
@@ -331,7 +333,7 @@ The curated and random subsets perform equivalently (difference of 0.09 percenta
 
 To distinguish between recoverable overfitting and fundamental incompatibility, we varied the number of pre-training epochs (Table~\ref{tab:ablation}, Fig.~\ref{fig:ablation}).
 
-\begin{table}[!htbp]
+\begin{table}[htbp]
 \caption{Pre-training duration vs.\ fine-tuning performance (seed 42).}\label{tab:ablation}
 \begin{adjustbox}{max width=\columnwidth}
 \begin{tabular}{@{}cccc@{}}
@@ -350,7 +352,7 @@ Pre-training epochs & mAP50 & mAP50-95 & $\Delta$ mAP50 vs B2 \\
 
 In the seed-42 diagnostic experiment, degradation was monotonic across the tested pre-training durations: each increment of pre-training worsened the final result. Even 10 epochs of exposure reduced mAP50 by 1.5~pp. At 100 epochs, performance converged to the random initialisation level (B1 = 0.8008), suggesting, in this diagnostic setting, that extended pre-training on InaTechShips may erase the benefit of COCO weights.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\columnwidth]{figs/fig5_ablation_curve.pdf}
   \caption{Downstream detection performance vs.\ pre-training duration on InaTechShips (seed 42). Dashed lines: B2 and B1 reference levels.}
@@ -361,7 +363,7 @@ In the seed-42 diagnostic experiment, degradation was monotonic across the teste
 
 We evaluated the in-place synthetic composition under three training regimes: sequential pre-training (100 epochs on synthetic, then 300 on real), frozen backbone pre-training (backbone frozen during synthetic phase), and joint balanced training (real and synthetic images combined in a single training run with 50/50 oversampling). Table~\ref{tab:main_results} and Fig.~\ref{fig:comparison} present the complete comparison.
 
-\begin{table*}[!htbp]
+\begin{table*}[htbp]
 \caption{Complete results on CITRA-3D-Real test set, including the
       spatial-anchoring ablation (A' joint-rand) discussed in
       Section~\ref{sec:ablation_anchoring}. P, R and F1 at IoU = 0.5.
@@ -394,7 +396,7 @@ To control for the effect of training volume, we ran a matched-steps experiment 
 
 Table~\ref{tab:ap_size} presents AP and AR stratified by object size following COCO conventions (small: area $<$ $32 \times 32$ pixels; medium: $32 \times 32$ to $96 \times 96$; large: $> 96 \times 96$). The joint balanced arm shows mean improvements across all size categories, although the magnitude of these gains is modest. The most notable gain is in small-object recall (AR$_\text{small}$: 0.385 $\pm$ 0.007 $\rightarrow$ 0.400 $\pm$ 0.011, +0.015 absolute), which is operationally relevant given that 71.6\% of vessels in CITRA-3D-Real fall in this category. Sequential pre-training, by contrast, shows no improvement for small objects and slight degradation for medium and large objects.
 
-\begin{table}[!htbp]
+\begin{table}[htbp]
 \caption{Mean $\pm$ std AP and AR by object size across 3 seeds (COCO conventions).}\label{tab:ap_size}
 \begin{adjustbox}{max width=\columnwidth}
 \begin{tabular}{@{}lccc@{}}
@@ -413,9 +415,9 @@ AR$_\text{large}$  & 0.751 $\pm$ 0.003 & \textbf{0.759 $\pm$ 0.010} & 0.745 $\pm
 \end{adjustbox}
 \end{table}
 
-\begin{figure*}[!htbp]
+\begin{figure*}[H]
   \centering
-  \includegraphics[width=\textwidth]{figs/fig6_comparison_bar.pdf}
+  \includegraphics[width=\textwidth]{figs/fig6_comparison_bar_dual.pdf}
   \caption{mAP50 and mAP50-95 for all experimental arms on CITRA-3D-Real test set. Error bars indicate $\pm$1 standard deviation across three seeds. B2-long was run only with seed 42 and is shown without an error bar.}
   \label{fig:comparison}
 \end{figure*}
@@ -432,7 +434,7 @@ A central design choice of our in-place composition pipeline is that synthetic v
 
 \paragraph{Implication for the method} The in-place anchoring strategy remains the recommended default because it acts as a robust form of data sanitisation: it guarantees, by construction, that synthetic objects fall in plausible locations of the operational scene, eliminating the need for the inpainting step and the heuristics required to define an adaptive sea region. However, our results indicate that the core methodological contribution of this work --- the combination of domain-adapted synthetic composition with joint balanced training --- does not depend critically on this specific placement choice.
 
-%\FloatBarrier
+\FloatBarrier
 % ================================================================
 % 6. DISCUSSION
 % ================================================================
@@ -478,6 +480,9 @@ Several limitations should be acknowledged. First, our evaluation uses a single 
 This paper investigated under which training conditions public ship imagery can be leveraged to improve vessel detection in operational maritime surveillance scenarios. We showed that direct use of InaTechShips images as pre-training data causes negative transfer ($-$4.15 pp mAP50), attributed to a structural domain gap in scale, density, and capture conditions. This gap affects curated and random subsets equally, indicating that CLIP-based visual similarity alone appears insufficient as a proxy for transfer learning compatibility.
 
 We proposed in-place synthetic composition as a domain adaptation strategy: vessel crops segmented with SAM from public ship images are placed at the exact positions and scales of real vessels in operational scenes. The results suggest that synthetic data adaptation and training regime jointly determine whether positive transfer is achieved. Sequential pre-training on synthetic data reduces but does not eliminate the negative transfer ($-$1.31~pp). However, joint balanced training---combining real and synthetic images in equal proportions within the same training run---improves mAP50 by +1.00~pp over the COCO baseline across the tested seeds, while increasing Recall from 0.783 to 0.805 (+2.2 pp) without loss of Precision.
+
+A controlled ablation isolating the effect of spatial anchoring shows that sea-aware random placement of synthetic crops reaches statistically equivalent detection performance to in-place anchoring (mAP50 = 0.8457 $\pm$ 0.0058 vs. 0.8451 $\pm$ 0.0033). This indicates that, within the joint balanced regime, the performance gain over the COCO baseline is attributable to crop diversity, scale and density alignment, and the 
+training regime itself --- rather than to the specific positioning of synthetic objects. In-place anchoring nonetheless remains the recommended default because it eliminates the need for inpainting and sea-region heuristics, acting as automatic data sanitisation.
 
 Although evaluated on a single operational maritime dataset, the results suggest that structurally aligned synthetic composition combined with an appropriate training regime may be a promising strategy for domains in which public source data differ from target operational imagery in scale, density, and context.
 
