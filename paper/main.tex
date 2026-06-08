@@ -13,12 +13,24 @@
 \usepackage{xcolor}
 \usepackage{adjustbox}
 
+\usepackage{placeins}
+
+\usepackage{subcaption}
+
+\usepackage{hyperref}
+\setlength{\emergencystretch}{3em}
+
+
 % Removed \todo command — no remaining TODOs
 
 \begin{document}
 \let\WriteBookmarks\relax
-\def\floatpagepagefraction{1}
-\def\textpagefraction{.001}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{5}
 
 \shorttitle{Visual Similarity Is Not Enough}
 \shortauthors{D.L. Freire et al.}
@@ -27,7 +39,7 @@
 
 \author[1]{Daniela L. Freire}[orcid=0000-0002-5363-3608]
 \cormark[1]
-\ead{daniela.freire@usp.br}
+\ead{danielalfreire@icmc.usp.br}
 \credit{Conceptualization, Methodology, Software, Investigation, Writing -- Original Draft, Visualization}
 
 \author[2]{Eduardo H. Teixeira}[orcid=0000-0001-8449-7541]
@@ -157,7 +169,7 @@ Fig.~\ref{fig:composition_process} illustrates both the domain gap and the compo
 
 \begin{figure*}[!htbp]
   \centering
-  \includegraphics[width=\textwidth]{figs/fig_composition_process.pdf}
+  \includegraphics[width=0.8\textwidth]{figs/fig_composition_process.pdf}
   \caption{In-place synthetic composition pipeline. (a)~InaTechShips source. (b)~SAM-segmented crop. (c)~CITRA-3D-Real operational scene. (d)~Synthetic result after in-place substitution.}
   \label{fig:composition_process}
 \end{figure*}
@@ -230,6 +242,7 @@ B  & COCO & InaTechShips random  & 100 & CITRA-3D-Real & 300 & 3 \\
 A' seq. & COCO & Synthetic (in-place) & 100 & CITRA-3D-Real & 300 & 3 \\
 A' frozen & COCO & Synthetic (freeze=22) & 100 & CITRA-3D-Real & 300 & 3 \\
 A' joint & COCO & --- & --- & CITRA-3D-Real + Synthetic (50/50) & 300 & 3 \\
+A' joint-rand & COCO & --- & --- & CITRA-3D-Real + Synthetic random (50/50) & 300 & 3 \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -339,7 +352,7 @@ In the seed-42 diagnostic experiment, degradation was monotonic across the teste
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.8\columnwidth]{figs/fig5_ablation_curve.pdf}
+  \includegraphics[width=\columnwidth]{figs/fig5_ablation_curve.pdf}
   \caption{Downstream detection performance vs.\ pre-training duration on InaTechShips (seed 42). Dashed lines: B2 and B1 reference levels.}
   \label{fig:ablation}
 \end{figure}
@@ -349,13 +362,18 @@ In the seed-42 diagnostic experiment, degradation was monotonic across the teste
 We evaluated the in-place synthetic composition under three training regimes: sequential pre-training (100 epochs on synthetic, then 300 on real), frozen backbone pre-training (backbone frozen during synthetic phase), and joint balanced training (real and synthetic images combined in a single training run with 50/50 oversampling). Table~\ref{tab:main_results} and Fig.~\ref{fig:comparison} present the complete comparison.
 
 \begin{table*}[!htbp]
-\caption{Complete results on CITRA-3D-Real test set (mean $\pm$ std, 3 seeds unless noted). P, R and F1 at IoU = 0.5. \textsuperscript{$\dagger$}Single seed (42); volume-matched real-only control.}\label{tab:main_results}
+\caption{Complete results on CITRA-3D-Real test set, including the
+      spatial-anchoring ablation (A' joint-rand) discussed in
+      Section~\ref{sec:ablation_anchoring}. P, R and F1 at IoU = 0.5.
+      \textsuperscript{$\dagger$}Single seed (42); volume-matched real-only control.}
+\label{tab:main_results}
 \begin{adjustbox}{max width=\textwidth}
 \begin{tabular}{@{}llccccccc@{}}
 \toprule
 Arm & Pipeline & mAP50 & mAP50-95 & Precision & Recall & F1 & $\Delta$ mAP50 \\
 \midrule
-\textbf{A' joint} & \textbf{COCO $\rightarrow$ real+synth balanced} & \textbf{0.8451 $\pm$ 0.0033} & \textbf{0.5206 $\pm$ 0.0017} & \textbf{0.857 $\pm$ 0.007} & \textbf{0.805 $\pm$ 0.003} & \textbf{0.830 $\pm$ 0.002} & \textbf{+1.00} \\
+\textbf{A' joint} & \textbf{COCO $\rightarrow$ real+synth balanced (in-place)} & \textbf{0.8451 $\pm$ 0.0033} & \textbf{0.5206 $\pm$ 0.0017} & \textbf{0.857 $\pm$ 0.007} & \textbf{0.805 $\pm$ 0.003} & \textbf{0.830 $\pm$ 0.002} & \textbf{+1.00} \\
+\textbf{A' joint-rand} & \textbf{COCO $\rightarrow$ real+synth balanced (random)} & \textbf{0.8457 $\pm$ 0.0058} & \textbf{0.5208 $\pm$ 0.0024} & \textbf{0.852 $\pm$ 0.009} & \textbf{0.804 $\pm$ 0.010} & \textbf{0.827 $\pm$ 0.005} & \textbf{+1.06} \\
 B2 & COCO $\rightarrow$ CITRA-3D & 0.8351 $\pm$ 0.0020 & 0.5055 $\pm$ 0.0022 & 0.857 $\pm$ 0.005 & 0.783 $\pm$ 0.004 & 0.818 $\pm$ 0.002 & ref \\
 B2-long & COCO $\rightarrow$ CITRA-3D $\times$13 & 0.8324\textsuperscript{$\dagger$} & 0.5107\textsuperscript{$\dagger$} & --- & --- & --- & $-$0.27 \\
 A' frozen & COCO $\rightarrow$ synth (freeze) $\rightarrow$ CITRA-3D & 0.8342 $\pm$ 0.0039 & 0.5074 $\pm$ 0.0035 & 0.855 $\pm$ 0.001 & 0.774 $\pm$ 0.009 & 0.812 $\pm$ 0.005 & $-$0.09 \\
@@ -397,19 +415,35 @@ AR$_\text{large}$  & 0.751 $\pm$ 0.003 & \textbf{0.759 $\pm$ 0.010} & 0.745 $\pm
 
 \begin{figure*}[!htbp]
   \centering
-  \includegraphics[width=0.9\textwidth]{figs/fig6_comparison_bar.pdf}
+  \includegraphics[width=\textwidth]{figs/fig6_comparison_bar.pdf}
   \caption{mAP50 and mAP50-95 for all experimental arms on CITRA-3D-Real test set. Error bars indicate $\pm$1 standard deviation across three seeds. B2-long was run only with seed 42 and is shown without an error bar.}
   \label{fig:comparison}
 \end{figure*}
 
+\subsection{Ablation of spatial anchoring}\label{sec:ablation_anchoring}
+
+A central design choice of our in-place composition pipeline is that synthetic vessels are placed at the exact positions of annotated real vessels in operational scenes. The rationale, as discussed in Section~\ref{sec:method}, is twofold: it produces visually plausible images (vessels are placed in sea regions where ships are expected to appear) and it preserves the spatial distribution of the operational domain. However, since both effects --- visual plausibility and spatial distribution preservation --- co-occur in the in-place design, the relative contribution of anchoring \emph{per se} to detection performance is not directly observable from the main comparison. To isolate this contribution, we evaluated an additional arm, A' joint-rand, in which the only difference from A' joint is the placement of synthetic crops.
+
+\paragraph{Setup} In A' joint-rand, synthetic crops are placed at uniformly sampled positions within an adaptive sea region, rather than at the positions of real annotated vessels. The sea region is defined by a horizon line set adaptively at the top of the highest real bounding box per image, with a floor at 35\% of the image height to guard against label outliers (e.g., distant vessels near the cloud line). Before synthetic placement, real objects are removed via Telea inpainting (radius = 3 px, padding = 2 px) (Telea, 2004) to avoid introducing contradictory label signal --- a step that is unnecessary in A' joint, where the synthetic crop occupies the same region by construction. Crop sizes are sampled from the empirical width--height distribution of real CITRA-3D-Real bounding boxes; all other aspects --- crop pool, 13$\times$ variations, training hyperparameters, oversampling, and the 50/50 balanced regime --- are held constant.
+
+\paragraph{Results} Table~\ref{tab:main_results} shows that A' joint-rand achieves mAP50 = 0.8457 $\pm$ 0.0058 and mAP50-95 = 0.5208 $\pm$ 0.0024, both statistically indistinguishable from A' joint (mAP50 = 0.8451 $\pm$ 0.0033, mAP50-95 = 0.5206 $\pm$ 0.0017). The two methods are also equivalent in F1 within their respective standard deviations (0.827 $\pm$ 0.005 vs.\ 0.830 $\pm$ 0.002). Both methods surpass the COCO baseline (B2 = 0.8351 $\pm$ 0.0020) by approximately one percentage point in mAP50, with non-overlapping ranges.
+
+\paragraph{Interpretation} This near-equivalence suggests that, within the joint balanced training regime, the model is robust to the specific placement of synthetic objects, provided that placement remains within the sea region of the operational scene. The performance gain over B2 is therefore attributable to (i) crop visual diversity from InaTechShips, (ii) scale and density alignment with the operational domain, and (iii) the joint balanced training regime itself --- rather than to spatial anchoring at the exact positions of real objects. A small but consistent advantage of A' joint over A' joint-rand is observed in Precision and F1, suggesting that in-place anchoring may contribute marginally to localisation precision rather than to detection per se. We treat this as preliminary evidence given the small number of seeds and recommend further validation in future work.
+
+\paragraph{Implication for the method} The in-place anchoring strategy remains the recommended default because it acts as a robust form of data sanitisation: it guarantees, by construction, that synthetic objects fall in plausible locations of the operational scene, eliminating the need for the inpainting step and the heuristics required to define an adaptive sea region. However, our results indicate that the core methodological contribution of this work --- the combination of domain-adapted synthetic composition with joint balanced training --- does not depend critically on this specific placement choice.
+
+%\FloatBarrier
 % ================================================================
 % 6. DISCUSSION
 % ================================================================
+
 \section{Discussion}\label{sec:discussion}
 
 \subsection{Why direct transfer fails}
 
 The negative transfer observed in Arms A and B is consistent with catastrophic forgetting or harmful intermediate feature adaptation \citep{mccloskey1989catastrophic, zhang2023negative}: the intermediate pre-training on InaTechShips may overwrite or de-emphasise generic low-level features learned from COCO (edges, textures, shapes) with domain-specific features optimised for close-range ship photography. These specialised features do not transfer to the operational domain, where ships appear as small, distant objects in complex maritime scenes. Notably, the generic COCO features---learned from 80 diverse object categories with no dedicated vessel class---appear more useful than 28,000 ship-specific images.
+
+The ablation of spatial anchoring (Section~\ref{sec:ablation_anchoring}) further indicates that the gain is attributable to the combination of crop diversity, scale/density alignment, and the joint balanced training regime, rather than to the specific in-place placement of synthetic objects.
 
 \subsection{Why in-place composition works}
 
@@ -433,11 +467,12 @@ The equivalence of Arms A and B (curated $\approx$ random, $\Delta$ = 0.09~pp) s
 
 \subsection{Limitations}
 
-Several limitations should be acknowledged. First, our evaluation uses a single operational dataset (CITRA-3D-Real) from one geographic location with specific camera configurations; generalisation to other maritime surveillance systems remains to be validated. Second, all experiments use a single detector architecture (YOLOv11m); the extent to which our findings transfer to other detectors such as RT-DETR or Faster R-CNN is unknown, though the domain gap analysis is architecture-independent. Third, while the synthetic images are visually convincing at operational scales (where vessels occupy a median area of 0.10\% of the image), close inspection reveals compositing artefacts at crop boundaries---this is unlikely to affect detection training but may matter for tasks requiring pixel-level precision. Fourth, the method requires annotated bounding boxes in the target domain to serve as anchor positions for composition, limiting its applicability to fully unsupervised scenarios. Fifth, the crop resizing does not enforce aspect-ratio matching between source crop and target bounding box, which may introduce geometric distortion for objects with extreme proportions. Finally, a standard random-placement copy-paste baseline was not included; the contribution of in-place anchoring relative to conventional copy-paste remains to be quantified in future work.
+Several limitations should be acknowledged. First, our evaluation uses a single operational dataset (CITRA-3D-Real) from one geographic location with specific camera configurations; generalisation to other maritime surveillance systems remains to be validated. Second, all experiments use a single detector architecture (YOLOv11m); the extent to which our findings transfer to other detectors such as RT-DETR or Faster R-CNN is unknown, though the domain gap analysis is architecture-independent. Third, while the synthetic images are visually convincing at operational scales (where vessels occupy a median area of 0.10\% of the image), close inspection reveals compositing artefacts at crop boundaries---this is unlikely to affect detection training but may matter for tasks requiring pixel-level precision. Fourth, the method requires annotated bounding boxes in the target domain to serve as anchor positions for composition, limiting its applicability to fully unsupervised scenarios. Fifth, the crop resizing does not enforce aspect-ratio matching between source crop and target bounding box, which may introduce geometric distortion for objects with extreme proportions. Finally, we include a sea-aware random placement baseline (A' joint-rand, Section~\ref{sec:ablation_anchoring}) but do not evaluate fully unconstrained random placement, which would permit vessels on land, buildings, or sky. Such a baseline is expected to produce contradictory training signal and was not considered methodologically informative.
 
 % ================================================================
 % 7. CONCLUSION
 % ================================================================
+
 \section{Conclusion}\label{sec:conclusion}
 
 This paper investigated under which training conditions public ship imagery can be leveraged to improve vessel detection in operational maritime surveillance scenarios. We showed that direct use of InaTechShips images as pre-training data causes negative transfer ($-$4.15 pp mAP50), attributed to a structural domain gap in scale, density, and capture conditions. This gap affects curated and random subsets equally, indicating that CLIP-based visual similarity alone appears insufficient as a proxy for transfer learning compatibility.
@@ -480,7 +515,7 @@ We thank CASNAV for providing the CITRA-3D-Real dataset and Eduardo H. Teixeira 
 % ================================================================
 % REFERENCES
 % ================================================================
-\clearpage
+%\clearpage
 \bibliographystyle{cas-model2-names}
 \bibliography{references}
 
