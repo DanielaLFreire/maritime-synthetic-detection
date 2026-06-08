@@ -1,33 +1,42 @@
-# Final Comparison — All Experimental Arms
+# Final Comparison — Test Set Results
 
-## Main Results (test set, CITRA-3D-Real)
+Test set: CITRA-3D-Real (401 images, 1,247 instances).
+Metrics: mAP50, mAP50-95, Precision, Recall, F1 (IoU = 0.5).
+All multi-seed entries use seeds 42, 123, 2024 (mean ± std).
 
-| Rank | Arm | Pipeline | mAP50 | mAP50-95 | P | R | F1 | Δ vs B2 |
-|------|-----|----------|-------|----------|---|---|----|----|
-| **1** | **A' joint balanced** | **COCO → real+synth balanced** | **0.8451 ± 0.0033** | **0.5206 ± 0.0017** | **0.857** | **0.805** | **0.830** | **+1.00 pp** |
-| 2 | B2 (baseline) | COCO → CITRA-3D | 0.8351 ± 0.0020 | 0.5055 ± 0.0022 | 0.857 | 0.783 | 0.818 | ref |
-| 3 | A' frozen backbone | COCO → synth (freeze) → CITRA-3D | 0.8342 ± 0.0039 | 0.5074 ± 0.0035 | 0.855 | 0.774 | 0.812 | −0.09 pp |
-| 3 | Synthetic 20ep | COCO → synth (20ep) → CITRA-3D | 0.8344 ± 0.0033 | 0.5011 ± 0.0065 | 0.855 | 0.773 | 0.812 | −0.08 pp |
-| 5 | A' sequential (100ep) | COCO → synth (100ep) → CITRA-3D | 0.8221 ± 0.0085 | 0.4933 ± 0.0059 | 0.828 | 0.769 | 0.797 | −1.31 pp |
-| 6 | B1 (baseline) | Random → CITRA-3D | 0.8008 ± 0.0061 | 0.4742 ± 0.0006 | 0.829 | 0.750 | 0.787 | −3.43 pp |
-| 7 | B (random) | COCO → random pool → CITRA-3D | 0.7945 ± 0.0046 | 0.4728 ± 0.0045 | 0.858 | 0.742 | 0.796 | −4.06 pp |
-| 8 | A (curated) | COCO → InaTechShips → CITRA-3D | 0.7936 ± 0.0049 | 0.4692 ± 0.0017 | 0.834 | 0.735 | 0.781 | −4.15 pp |
+## Main results
 
-## Ablation: Pre-training Epochs on InaTechShips Direct (seed 42)
+| Arm | Pipeline | mAP50 | mAP50-95 | P | R | F1 | n | Δ vs B2 (mAP50) |
+|-----|----------|-------|----------|---|---|---|---|-----------------|
+| **A' joint-rand** ⭐ | **COCO → real+synth balanced (random)** | **0.8457 ± 0.0058** | **0.5208 ± 0.0024** | **0.852 ± 0.009** | **0.804 ± 0.010** | **0.827 ± 0.005** | 3 | **+1.06** |
+| **A' joint** | **COCO → real+synth balanced (in-place)** | **0.8451 ± 0.0033** | **0.5206 ± 0.0017** | **0.857 ± 0.007** | **0.805 ± 0.003** | **0.830 ± 0.002** | 3 | **+1.00** |
+| B2 | COCO → CITRA-3D | 0.8351 ± 0.0020 | 0.5055 ± 0.0022 | 0.857 ± 0.005 | 0.783 ± 0.004 | 0.818 ± 0.002 | 3 | ref |
+| A' frozen | COCO → synth (freeze) → CITRA-3D | 0.8342 ± 0.0039 | 0.5074 ± 0.0035 | 0.855 ± 0.001 | 0.774 ± 0.009 | 0.812 ± 0.005 | 3 | −0.09 |
+| B2-long† | COCO → CITRA-3D ×13 (volume control) | 0.8324 | 0.5108 | 0.850 | 0.805 | 0.827 | 1 | −0.27 |
+| A' seq | COCO → synth (100ep) → CITRA-3D | 0.8221 ± 0.0085 | 0.4933 ± 0.0059 | 0.828 ± 0.018 | 0.769 ± 0.010 | 0.797 ± 0.013 | 3 | −1.31 |
+| B1 | Random init → CITRA-3D | 0.8008 ± 0.0061 | 0.4742 ± 0.0006 | 0.829 ± 0.003 | 0.750 ± 0.002 | 0.787 ± 0.000 | 3 | −3.43 |
+| B | COCO → random InaTech → CITRA-3D | 0.7945 ± 0.0046 | 0.4728 ± 0.0045 | 0.856 ± 0.003 | 0.734 ± 0.014 | 0.790 ± 0.009 | 3 | −4.06 |
+| A | COCO → curated InaTech → CITRA-3D | 0.7936 ± 0.0049 | 0.4692 ± 0.0017 | 0.834 ± 0.008 | 0.735 ± 0.013 | 0.781 ± 0.004 | 3 | −4.15 |
 
-| Epochs | mAP50 | Δ vs B2 |
-|--------|-------|---------|
-| 0 (B2) | 0.8351 | ref |
-| 10 | 0.8200 | −1.51 pp |
-| 20 | 0.8171 | −1.80 pp |
-| 50 | 0.8037 | −3.14 pp |
-| 100 | 0.8006 | −3.45 pp |
+† Single seed (42); volume-matched real-only control.
 
-## Dataset Statistics
+## Key observations
 
-| Dataset | Images | Objects | Obj/img |
-|---------|--------|---------|---------|
-| CITRA-3D-Real | 2,081 | 7,003 | 3.37 |
-| dataset_25k_v2 (curated) | 27,796 | ~27,796 | ~1.0 |
-| random_pool_v2 | 27,964 | — | ~1.0 |
-| Synthetic (in-place) | 27,053 | 91,035 | 3.37 |
+- **A' joint and A' joint-rand are statistically equivalent** in mAP50 (Δ = 0.0006; well within the std of either method). They are also equivalent in mAP50-95 (Δ = 0.0002).
+- **Both joint-trained variants surpass B2** by ~+1.0 pp mAP50 with non-overlapping ranges (preliminary evidence given n=3).
+- **A' joint maintains a small advantage in Precision and F1** (+0.5 pp in P, +0.3 pp in F1), suggesting that in-place anchoring contributes mainly to localisation precision rather than to detection.
+- **Sequential pre-training (A' seq) degrades performance** relative to B2 (−1.31 pp), illustrating a forgetting-like effect that the joint regime avoids.
+- **Frozen backbone (A' frozen) largely neutralises** the degradation observed in A' seq but does not match the joint variants.
+- **Direct pre-training on public ship images (A, B)** produces the largest negative transfer (−4.06 to −4.15 pp), confirming domain incompatibility.
+
+## Ablation: spatial anchoring (Section 5.5)
+
+The A' joint-rand arm differs from A' joint only in the placement of synthetic crops: instead of being placed at the exact positions and scales of annotated real vessels (in-place anchoring), crops are placed at uniformly sampled positions within an adaptive sea region. Real objects are removed via Telea inpainting (radius = 3) before synthetic placement to avoid contradictory label signal. All other aspects — crop pool, scale distribution, 13× variations, training hyperparameters — are held constant.
+
+The near-equivalence of the two variants (Δ mAP50 = 0.0006, Δ mAP50-95 = 0.0002) indicates that, within the joint balanced training regime, the model is robust to placement choice provided that the placement remains within the operational scene's sea region. The performance gain over B2 is therefore attributable to:
+
+1. Crop diversity from InaTechShips (visual appearance);
+2. Scale and density alignment with the operational domain;
+3. The joint balanced training regime itself;
+
+rather than to spatial anchoring at the exact positions of real objects.
