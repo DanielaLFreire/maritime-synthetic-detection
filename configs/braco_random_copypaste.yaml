@@ -1,0 +1,76 @@
+# Configuration for A' joint-rand (random copy-paste baseline)
+#
+# Arm: A' joint-rand
+# Description: Identical to A' joint but with random sea-aware placement
+#              instead of in-place anchoring at real vessel positions.
+# Purpose: Isolate the contribution of spatial anchoring in the joint
+#          balanced training regime.
+#
+# Reference: Section 5.5 of the manuscript.
+
+arm_name: "A' joint-rand"
+
+# === Data ===
+real_dataset:
+  path: "/path/to/CITRA-3D-Real"
+  label_subdir: "labels_single_class"
+  oversample: 13                # match number of synthetic variations
+
+synthetic_dataset:
+  path: "/path/to/dataset_random_copypaste_v4"
+  n_variations: 13              # variations per real image
+  generation_params:
+    iou_threshold: 0.20          # IoU between synthetic crops
+    sea_coverage_min: 0.75       # min fraction of bbox inside sea_mask
+    horizon_min_pct: 0.35        # floor: top 35% always treated as sky
+    horizon_margin: 0
+    inpaint_radius: 3            # Telea inpainting radius (px)
+    inpaint_padding: 2           # extra padding around real bboxes
+    max_attempts: 100
+
+# === Combined dataset (constructed automatically) ===
+combined_dataset:
+  path: "/path/to/combined_random_copypaste_v4"
+  composition: "13x real + synth (50/50 balanced)"
+  expected_size:
+    train: 35043                # 17524 real (1348x13) + 17519 synth
+    val: 8632                   # 4316 real (332x13) + 4316 synth
+
+# === Test set (held out) ===
+test_yaml: "/path/to/CITRA-3D-Real/data_single_class.yaml"
+test_split: "test"              # 401 images
+
+# === Model and training ===
+model: "yolo11m.pt"
+hyperparameters:
+  epochs: 300
+  patience: 30
+  optimizer: "AdamW"
+  lr0: 0.001
+  lrf: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  cos_lr: true
+  imgsz: 640
+  batch: 16
+  device: 0
+  amp: true
+  save: true
+  save_period: 10                # checkpoint every 10 epochs (disconnect safety)
+  exist_ok: true
+
+# === Experiment ===
+seeds: [42, 123, 2024]
+n_seeds: 3
+output_dir: "runs/braco_random_copypaste_v4"
+
+# === Reproducibility notes ===
+# - Synthetic dataset is generated with horizon-adaptive sea mask
+#   (top of highest real bbox per image), floored at 35% of image
+#   height to prevent placement above the sky/horizon line.
+# - Real objects are inpainted (Telea, radius=3) before synthetic
+#   placement to avoid contradictory label signal.
+# - Bounding box sizes are sampled from the empirical distribution
+#   of real CITRA-3D-Real bboxes; placement is uniform within sea_mask
+#   subject to IoU constraints.
