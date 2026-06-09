@@ -23,6 +23,8 @@ env/
 # Data (too large for git — use Google Drive)
 data/
 datasets/
+data/Singapore-maritime-5/
+data/smd_clean/
 *.jpg
 *.jpeg
 *.png
