@@ -1,0 +1,66 @@
+# Configuration for B2-long (volume control)
+#
+# Arm: B2-long
+# Description: B2 (COCO pretrain → CITRA-3D-Real fine-tune) with CITRA-3D-Real
+#              oversampled 13× to match the number of training images per epoch
+#              of A' joint (which has 13× synthetic variations). This serves as
+#              a volume control: if A' joint outperforms B2-long, the gain
+#              cannot be explained by training volume alone.
+# Purpose: Isolate the contribution of training volume in the joint regime.
+#
+# Reference: Section 5.4 of the manuscript ("matched-steps experiment").
+
+arm_name: "B2-long"
+
+# === Data ===
+real_dataset:
+  path: "/path/to/CITRA-3D-Real"
+  label_subdir: "labels_single_class"
+  oversample: 13                  # match the 13 synthetic variations of A' joint
+
+# === Oversampled dataset (constructed automatically) ===
+oversampled_dataset:
+  path: "/content/data/b2_long"  # ephemeral (rebuilt each Colab session)
+  composition: "13× real, no synthetic"
+  expected_size:
+    train: 17524                  # 1348 real × 13
+    val: 4316                     # 332 real × 13
+
+# === Test set (held out) ===
+test_yaml: "/path/to/CITRA-3D-Real/data_single_class.yaml"
+test_split: "test"                # 401 images
+
+# === Model and training (identical to B2 / configs/baselines.yaml) ===
+model: "yolo11m.pt"
+hyperparameters:
+  epochs: 300
+  patience: 30
+  optimizer: "AdamW"
+  lr0: 0.001
+  lrf: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  cos_lr: true
+  imgsz: 640
+  batch: 16
+  device: 0
+  amp: true
+  save: true
+  save_period: 20                 # checkpoint every 20 epochs
+  exist_ok: true
+
+# === Experiment ===
+seeds: [42, 123, 2024]
+n_seeds: 3
+output_dir: "runs/b2_long"
+
+# === Reproducibility notes ===
+# - All hyperparameters MUST be identical to B2 (see configs/baselines.yaml,
+#   B2_coco entry) except for the data source: B2 uses raw CITRA-3D-Real,
+#   B2-long uses the 13× oversampled version. This ensures the only
+#   experimental difference is training volume.
+# - The oversampled dataset is rebuilt in /content/data/ each Colab session
+#   (script automatically detects and skips recreation if already present).
+# - Final evaluation on the held-out CITRA-3D-Real test set; no synthetic
+#   data is used at any stage.
