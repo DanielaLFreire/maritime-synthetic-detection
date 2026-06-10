@@ -1,0 +1,92 @@
+{
+  "arm": "B2-long",
+  "description": "COCO \u2192 CITRA-3D-Real oversampled 13\u00d7 (volume control)",
+  "n_seeds": 3,
+  "seeds": [
+    42,
+    123,
+    2024
+  ],
+  "test_yaml": "/content/data/CITRA-3D-Real/data_single_class.yaml",
+  "per_seed": [
+    {
+      "seed": 42,
+      "mAP50": 0.8324081669115572,
+      "mAP50_95": 0.5108038797512763,
+      "P": 0.8501492496818014,
+      "R": 0.8052729665289948,
+      "F1": 0.8271028400847417,
+      "best_weights": "/content/drive/MyDrive/PROJETO_MARINHA/Experimento_Dataset_Similar/runs/b2_long/seed_0042/weights/best.pt"
+    },
+    {
+      "seed": 123,
+      "mAP50": 0.8372961796525866,
+      "mAP50_95": 0.5133432723279717,
+      "P": 0.8557154067722017,
+      "R": 0.8011226944667201,
+      "F1": 0.8275196373832974,
+      "best_weights": "/content/drive/MyDrive/PROJETO_MARINHA/Experimento_Dataset_Similar/runs/b2_long/seed_0123/weights/best.pt"
+    },
+    {
+      "seed": 2024,
+      "mAP50": 0.8356543517399293,
+      "mAP50_95": 0.5059538302103526,
+      "P": 0.8474830293585949,
+      "R": 0.7818765036086608,
+      "F1": 0.8133589357725759,
+      "best_weights": "/content/drive/MyDrive/PROJETO_MARINHA/Experimento_Dataset_Similar/runs/b2_long/seed_2024/weights/best.pt"
+    }
+  ],
+  "summary": {
+    "mAP50": {
+      "mean": 0.8351195661013577,
+      "std": 0.0024875015373931743,
+      "n": 3,
+      "values": [
+        0.8324081669115572,
+        0.8372961796525866,
+        0.8356543517399293
+      ]
+    },
+    "mAP50_95": {
+      "mean": 0.5100336607632002,
+      "std": 0.003754449582775843,
+      "n": 3,
+      "values": [
+        0.5108038797512763,
+        0.5133432723279717,
+        0.5059538302103526
+      ]
+    },
+    "P": {
+      "mean": 0.851115895270866,
+      "std": 0.004200453813715787,
+      "n": 3,
+      "values": [
+        0.8501492496818014,
+        0.8557154067722017,
+        0.8474830293585949
+      ]
+    },
+    "R": {
+      "mean": 0.7960907215347919,
+      "std": 0.01248355650391286,
+      "n": 3,
+      "values": [
+        0.8052729665289948,
+        0.8011226944667201,
+        0.7818765036086608
+      ]
+    },
+    "F1": {
+      "mean": 0.822660471080205,
+      "std": 0.00805806113815995,
+      "n": 3,
+      "values": [
+        0.8271028400847417,
+        0.8275196373832974,
+        0.8133589357725759
+      ]
+    }
+  }
+}
