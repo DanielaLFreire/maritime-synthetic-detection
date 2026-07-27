@@ -1,65 +1,101 @@
 {
-  "B2 seed42": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "B2 (COCO) seed42": {
+    "convention": "native",
+    "AP": 0.5023,
+    "AP50": 0.8245,
+    "AP_small": 0.2509,
+    "AP_medium": 0.5702,
+    "AP_large": 0.6885,
+    "AR_small": 0.379,
+    "AR_medium": 0.6504,
+    "AR_large": 0.7598
   },
-  "B2 seed123": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "B2 (COCO) seed123": {
+    "convention": "native",
+    "AP": 0.5076,
+    "AP50": 0.8298,
+    "AP_small": 0.2532,
+    "AP_medium": 0.571,
+    "AP_large": 0.6893,
+    "AR_small": 0.4041,
+    "AR_medium": 0.6466,
+    "AR_large": 0.7538
   },
-  "B2 seed2024": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "B2 (COCO) seed2024": {
+    "convention": "native",
+    "AP": 0.4982,
+    "AP50": 0.8227,
+    "AP_small": 0.2465,
+    "AP_medium": 0.5648,
+    "AP_large": 0.6801,
+    "AR_small": 0.3856,
+    "AR_medium": 0.6498,
+    "AR_large": 0.7546
   },
-  "Joint seed42": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "A' joint balanced seed42": {
+    "convention": "native",
+    "AP": 0.5184,
+    "AP50": 0.8396,
+    "AP_small": 0.272,
+    "AP_medium": 0.5808,
+    "AP_large": 0.7041,
+    "AR_small": 0.4076,
+    "AR_medium": 0.6621,
+    "AR_large": 0.7665
   },
-  "Joint seed123": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "A' joint balanced seed123": {
+    "convention": "native",
+    "AP": 0.5184,
+    "AP50": 0.8344,
+    "AP_small": 0.2644,
+    "AP_medium": 0.5842,
+    "AP_large": 0.6982,
+    "AR_small": 0.4086,
+    "AR_medium": 0.6592,
+    "AR_large": 0.7685
   },
-  "Joint seed2024": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "A' joint balanced seed2024": {
+    "convention": "native",
+    "AP": 0.5155,
+    "AP50": 0.829,
+    "AP_small": 0.2767,
+    "AP_medium": 0.5736,
+    "AP_large": 0.6958,
+    "AR_small": 0.4154,
+    "AR_medium": 0.6511,
+    "AR_large": 0.7645
   },
-  "Seq seed42": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "A' sequential 100ep seed42": {
+    "convention": "native",
+    "AP": 0.4864,
+    "AP50": 0.8065,
+    "AP_small": 0.241,
+    "AP_medium": 0.5554,
+    "AP_large": 0.6644,
+    "AR_small": 0.3922,
+    "AR_medium": 0.6439,
+    "AR_large": 0.7434
   },
-  "Seq seed123": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "A' sequential 100ep seed123": {
+    "convention": "native",
+    "AP": 0.4978,
+    "AP50": 0.8266,
+    "AP_small": 0.2409,
+    "AP_medium": 0.5705,
+    "AP_large": 0.6812,
+    "AR_small": 0.3767,
+    "AR_medium": 0.6464,
+    "AR_large": 0.7506
   },
-  "Seq seed2024": {
-    "AP50": 0.0,
-    "AP50-95": 0.0,
-    "AP_small": 0.0,
-    "AP_medium": 0.0,
-    "AP_large": 0.0
+  "A' sequential 100ep seed2024": {
+    "convention": "native",
+    "AP": 0.4889,
+    "AP50": 0.8072,
+    "AP_small": 0.2449,
+    "AP_medium": 0.5594,
+    "AP_large": 0.6621,
+    "AR_small": 0.3911,
+    "AR_medium": 0.6366,
+    "AR_large": 0.755
   }
 }
