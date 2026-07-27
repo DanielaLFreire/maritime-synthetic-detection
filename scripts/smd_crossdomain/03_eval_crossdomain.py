@@ -42,7 +42,7 @@ ARMS = {
     "B2-long (volume control)": [
         "b2_long/seed_0042/weights/best.pt",
         "b2_long/seed_0123/weights/best.pt",
-        # "b2_long/seed_2024/weights/best.pt",   # add when finished
+        "b2_long/seed_2024/weights/best.pt",
     ],
     "A (InaTech curated)": [
         "braco_a/seed_0042/finetune/weights/best.pt",
@@ -53,6 +53,11 @@ ARMS = {
         "braco_b/seed_0042_finetune/weights/best.pt",
         "braco_b/seed_0123_finetune/weights/best.pt",
         "braco_b/seed_2024_finetune/weights/best.pt",
+    ],
+    "A' seq.": [
+        "braco_a_sintetico_v4/seed_0042_finetune/weights/best.pt",
+        "braco_a_sintetico_v4/seed_0123_finetune/weights/best.pt",
+        "braco_a_sintetico_v4/seed_2024_finetune/weights/best.pt",
     ],
     "A' frozen": [
         "braco_frozen/seed_0042_finetune/weights/best.pt",
@@ -72,9 +77,9 @@ ARMS = {
 }
 
 
-def evaluate(runs, data, imgsz, conf, iou):
+def evaluate_arms(arms, runs, data, imgsz, conf, iou):
     results = {}
-    for name, rels in ARMS.items():
+    for name, rels in arms.items():
         m50, m5095 = [], []
         for rel in rels:
             ck = os.path.join(runs, rel)
@@ -101,9 +106,28 @@ def main():
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--conf", type=float, default=0.001)
     ap.add_argument("--iou", type=float, default=0.7)
+    ap.add_argument("--arms", nargs="+", default=None,
+                    help="avalia só estes braços (nomes exatos do dict ARMS); "
+                         "os demais são preservados do JSON existente")
     args = ap.parse_args()
 
-    results = evaluate(args.runs, args.data, args.imgsz, args.conf, args.iou)
+    if args.arms:
+        unknown = [a for a in args.arms if a not in ARMS]
+        if unknown:
+            raise SystemExit(f"braços desconhecidos: {unknown}\n"
+                             f"disponíveis: {list(ARMS)}")
+        selected = {k: v for k, v in ARMS.items() if k in args.arms}
+    else:
+        selected = ARMS
+
+    results = {}
+    if os.path.exists(args.out):
+        results = json.load(open(args.out))
+        print(f"[merge] preservando {len(results)} braço(s) de {args.out}")
+
+    new = evaluate_arms(selected, args.runs, args.data, args.imgsz,
+                        args.conf, args.iou)
+    results.update(new)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     json.dump(results, open(args.out, "w"), indent=2)
