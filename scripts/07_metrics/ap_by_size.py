@@ -100,7 +100,9 @@ def load_gt_normalized():
         raise SystemExit(f"[erro] nenhuma imagem em {TEST_IMAGES}")
 
     imgs, anns = [], []
+    stems = set()
     for i, f in enumerate(files):
+        stems.add(f.stem)
         with Image.open(f) as im:
             W, H = im.size
         imgs.append(dict(id=i, file=str(f), W=W, H=H))
@@ -114,21 +116,32 @@ def load_gt_normalized():
                 continue
             cx, cy, w, h = map(float, p[1:5])
             anns.append(dict(image_id=i, x=cx - w / 2, y=cy - h / 2, w=w, h=h))
+
+    # sanidade: labels sem imagem correspondente indicam descompasso de nomes
+    orphans = [p.name for p in TEST_LABELS.glob("*.txt") if p.stem not in stems]
+    if orphans:
+        print(f"[aviso] {len(orphans)} label(s) sem imagem correspondente "
+              f"(ex.: {orphans[:3]}) — objetos desses arquivos NÃO contam")
+    n_missing = sum(1 for f in files if not (TEST_LABELS / (f.stem + '.txt')).exists())
+    if n_missing:
+        print(f"[aviso] {n_missing} imagem(ns) sem arquivo de label")
     return imgs, anns
 
 
 def predict_normalized(weights, imgs, imgsz, conf, iou, max_det):
-    """Roda o detector e devolve predições em coordenadas normalizadas."""
+    """Roda o detector e devolve predições em coordenadas normalizadas.
+
+    Uma chamada por imagem, indexando pelo caminho QUE NÓS passamos —
+    r.path da Ultralytics não é confiável (renomeia para image0.jpg etc.).
+    """
     from ultralytics import YOLO
 
     model = YOLO(str(weights))
-    by_file = {im["file"]: im for im in imgs}
     dets = []
-    stream = model.predict([im["file"] for im in imgs], imgsz=imgsz, conf=conf,
-                           iou=iou, max_det=max_det, verbose=False, stream=True)
-    for r in stream:
-        im = by_file[str(r.path)]
+    for im in imgs:
         W, H = im["W"], im["H"]
+        r = model.predict(im["file"], imgsz=imgsz, conf=conf, iou=iou,
+                          max_det=max_det, verbose=False)[0]
         if r.boxes is None or len(r.boxes) == 0:
             continue
         xyxy = r.boxes.xyxy.cpu().numpy()      # px na imagem ORIGINAL
