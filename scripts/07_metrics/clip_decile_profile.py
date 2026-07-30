@@ -81,10 +81,23 @@ def find_images(root):
     return out
 
 
+LABEL_DIR_CANDIDATES = ("labels", "labels_single_class", "labels_cleaned")
+
+
 def read_label_stats(img_path):
-    """area_frac = soma de w*h normalizados; max_area; density = nº de boxes."""
-    lbl = img_path.parent.parent / "labels" / (img_path.stem + ".txt")
-    if not lbl.exists():
+    """area_frac = soma de w*h normalizados; max_area; density = nº de boxes.
+
+    A pasta de labels pode se chamar labels/, labels_single_class/ ou
+    labels_cleaned/ conforme o preparo; as coordenadas são idênticas entre
+    as variantes (só a coluna de classe difere, e ela não é usada aqui).
+    """
+    lbl = None
+    for cand in LABEL_DIR_CANDIDATES:
+        p = img_path.parent.parent / cand / (img_path.stem + ".txt")
+        if p.exists():
+            lbl = p
+            break
+    if lbl is None:
         return dict(area_frac=np.nan, max_area=np.nan, density=0)
     areas = []
     for line in open(lbl):
@@ -194,6 +207,13 @@ def main():
 
     print("labels…")
     stats = [read_label_stats(p) for _, p in items]
+    n_ok = sum(1 for s_ in stats if s_["density"] > 0)
+    print(f"  labels encontrados para {n_ok}/{len(items)} imagens")
+    if n_ok < 0.5 * len(items):
+        raise SystemExit(
+            "[erro] menos da metade das imagens tem label — a pasta de labels "
+            f"não foi encontrada (candidatas: {LABEL_DIR_CANDIDATES}). "
+            "Confira a árvore do dataset com: ls <dataset>/train/")
 
     print("similaridades CLIP…")
     sims = compute_similarities(items, ref, args.batch)
