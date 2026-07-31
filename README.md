@@ -30,7 +30,7 @@ Test set: CITRA-3D-Real (401 images). All values are mean ± std over 3 seeds.
 | B2 (baseline) | COCO → CITRA-3D | 0.8351 ± 0.0020 | 0.5055 ± 0.0022 | ref |
 | B2-long | COCO → CITRA-3D ×13 (volume control) | 0.8351 ± 0.0025 | 0.5100 ± 0.0038 | **0.00 pp** |
 | A' frozen | COCO → synth (freeze) → CITRA-3D | 0.8342 ± 0.0039 | 0.5074 ± 0.0035 | −0.09 pp |
-| A' sequential | COCO → synth (100ep) → CITRA-3D | 0.8221 ± 0.0085 | 0.4933 ± 0.0059 | −1.31 pp |
+| A' sequential | COCO → synth (100 ep) → CITRA-3D (300 ep) | 0.8221 ± 0.0085 | 0.4933 ± 0.0059 | −1.31 pp |
 | B1 (baseline) | Random init → CITRA-3D | 0.8008 ± 0.0061 | 0.4742 ± 0.0006 | −3.43 pp |
 | B (random pool) | COCO → random InaTech → CITRA-3D | 0.7945 ± 0.0046 | 0.4728 ± 0.0045 | −4.06 pp |
 | A (curated) | COCO → curated InaTech → CITRA-3D | 0.7936 ± 0.0049 | 0.4692 ± 0.0017 | −4.15 pp |
@@ -38,6 +38,8 @@ Test set: CITRA-3D-Real (401 images). All values are mean ± std over 3 seeds.
 ⭐ **A' joint-rand** confirms that the balanced joint training regime is robust to placement choice within the sea region. See Section 5.5 of the manuscript for the ablation analysis.
 
 **B2-long volume control**: mAP50 identical to B2 confirms that the +1.00 pp gain of A' joint is fully attributable to synthetic data + joint training regime, not to training volume. See Section 5.4 of the manuscript.
+
+**A' sequential vs. A' joint — what "sequential" means**: A' sequential is a two-stage pipeline (100 epochs of pre-training on the synthetic set, *then* 300 epochs of fine-tuning on real CITRA-3D only), whereas A' joint mixes real and synthetic images in every batch of a single run. A' sequential is *not* B2-long with synthetic data: B2-long oversamples the real set 13× with no synthetic images. Extending synthetic pre-training beyond 100 epochs is counter-indicated by the epoch ablation (Figure 4): degradation grows monotonically with pre-training exposure.
 
 ## Repository Structure
 
@@ -117,8 +119,20 @@ Tested with: Python 3.10+, PyTorch 2.0+, Ultralytics 8.4.60+, CUDA 12.x. Trained
 4. **Synthetic generation** (`scripts/04_*`):
    - `gerar_dataset_copypaste_v4.py` — in-place composition (A' joint).
    - `gerar_baseline_random_copypaste_v4.py` — sea-aware random placement (A' joint-rand).
+
+   Both generators produce **13 variations per real training image** (1,348 real train
+   images → 17,524 synthetic images), each variation replacing every annotated vessel
+   with a different SAM-segmented crop. In the balanced joint regime the real train set
+   is repeated 13× to match, so one A' joint epoch contains **35,048 images**
+   (17,524 real + 17,524 synthetic, 50/50 by construction).
 5. **Training** (`scripts/05_*`): baselines, ablation experiments, joint training.
 6. **Figures** (`scripts/06_*`): regenerate paper figures from saved results.
+7. **Metrics & statistics** (`scripts/07_*`):
+   - `ap_by_size.py` — COCO size-stratified AP/AR per seed (pycocotools), native-pixel
+     convention; regenerates Table III (`results/ap_by_size_per_seed.json`).
+   - `clip_decile_profile.py` — CLIP-similarity vs. structural-property diagnostic on the
+     pre-training set (`results/clip_decile_analysis.json`).
+   - `stats_revisao.py` — seed-paired significance tests for all headline comparisons.
 
 ### Reproducing B2-long (volume control)
 

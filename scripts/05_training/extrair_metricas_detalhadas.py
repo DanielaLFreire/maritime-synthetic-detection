@@ -1,11 +1,15 @@
 """
 extrair_metricas_detalhadas.py
 
-Extrai métricas faltantes para a revisão:
+Extrai métricas para a revisão:
 1. P, R, F1 com desvio-padrão por seed
-2. AP small / medium / large
-3. Nº de steps por época de cada braço (para comparabilidade)
-4. Threshold de confiança usado pelo Ultralytics
+2. Nº de steps por época de cada braço (para comparabilidade)
+3. Threshold de confiança usado pelo Ultralytics
+
+NOTA: AP/AR estratificados por tamanho (COCO small/medium/large) NÃO saem
+deste script — o results_dict da Ultralytics não expõe essas chaves. Use
+scripts/07_metrics/ap_by_size.py (pycocotools, por seed, convenção em
+pixels nativos), que gera results/ap_by_size_per_seed.json e a Tabela III.
 """
 
 from pathlib import Path
@@ -95,18 +99,6 @@ def main():
                 "Recall": r,
                 "F1": f1,
             }
-            
-            # AP por tamanho (se disponível)
-            try:
-                # Ultralytics armazena em m.box.maps (lista por classe)
-                # Para AP por tamanho, precisamos do COCO evaluator
-                if hasattr(m, 'results_dict'):
-                    rd = m.results_dict
-                    for k, v in rd.items():
-                        if 'small' in k.lower() or 'medium' in k.lower() or 'large' in k.lower():
-                            result[k] = float(v)
-            except:
-                pass
             
             seed_data[seed] = result
             print(f"    Seed {seed}: mAP50={result['mAP50']:.4f} "
