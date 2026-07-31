@@ -113,6 +113,25 @@ def main():
                 color=color, markersize=6, markerfacecolor="white",
                 markeredgewidth=1.2, linestyle="none", zorder=5)
 
+    # linhas de referência B1/B2 (como na versão publicada; a legenda as cita)
+    from json import load as _jl
+    md2 = _jl(open(args.metricas))
+    for key, style in (("mAP50", dict(map50=True)), ("mAP50-95", dict(map50=False))):
+        pass
+    b1_50 = np.mean([md2["B1 (random init)"]["mAP50"]["per_seed"][s_]
+                     for s_ in ("42", "123", "2024")])
+    b1_95 = np.mean([md2["B1 (random init)"]["mAP50-95"]["per_seed"][s_]
+                     for s_ in ("42", "123", "2024")])
+    b2_50 = data[0]["map50"][0]
+    for y, c in ((b2_50, COLORS["A_prime"]), (b1_50, "#F18F01"),
+                 (b1_95, "#F18F01")):
+        ax.axhline(y, color=c, linestyle=":", linewidth=0.9, alpha=0.6, zorder=1)
+    ax.text(102, b2_50, "B2", fontsize=7, color=COLORS["A_prime"],
+            va="center", alpha=0.8)
+    ax.text(102, b1_50, "B1", fontsize=7, color="#F18F01", va="center", alpha=0.9)
+    ax.text(102, b1_95, "B1", fontsize=7, color="#F18F01", va="center", alpha=0.9)
+    ax.set_xlim(-4, 112)
+
     ax.set_xlabel("Pre-training epochs on InaTechShips")
     ax.set_ylabel("Score on CITRA-3D-Real test")
     ax.set_xticks(epochs)
