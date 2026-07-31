@@ -64,7 +64,16 @@ from pathlib import Path
 # ═══════════════════════════════════════════════════════════════════
 
 DRIVE_BASE = Path("/content/drive/MyDrive")
-DATASET_25K_V2 = DRIVE_BASE / "InaTechShips" / "dataset_25k_v2"
+# Após a migração do Drive o conjunto vive em PROJETO_MARINHA/Datasets;
+# o caminho antigo fica como fallback. Alternativa mais rápida: extrair
+# Datasets/_zips/dataset_25k_v2.zip direto em /content/data (o script
+# detecta os dados locais e pula a cópia via FUSE).
+DATASET_25K_V2_CANDIDATES = (
+    DRIVE_BASE / "PROJETO_MARINHA" / "Datasets" / "InaTechShips" / "dataset_25k_v2",
+    DRIVE_BASE / "InaTechShips" / "dataset_25k_v2",
+)
+DATASET_25K_V2 = next((p for p in DATASET_25K_V2_CANDIDATES if p.exists()),
+                      DATASET_25K_V2_CANDIDATES[0])
 CITRA3D_DRIVE = DRIVE_BASE / "PROJETO_MARINHA" / "Datasets" / "CITRA-3D-Real"
 RUNS_DIR = DRIVE_BASE / "PROJETO_MARINHA" / "Experimento_Dataset_Similar" / "runs" / "ablation_epochs"
 BRACO_A_DIR = DRIVE_BASE / "PROJETO_MARINHA" / "Experimento_Dataset_Similar" / "runs" / "braco_a"
@@ -74,7 +83,7 @@ LOCAL_DATASET_25K = LOCAL_DATA / "dataset_25k_v2"
 LOCAL_CITRA3D = LOCAL_DATA / "CITRA-3D-Real"
 
 MODEL_NAME = "yolo11m.pt"
-SEED = 42
+DEFAULT_SEED = 42        # a seed histórica; ep_XXX/ sem sufixo pertence a ela
 EPOCH_VARIANTS = [10, 20, 50]
 
 # Hyperparams (idênticos a B2 / braço A)
@@ -185,16 +194,22 @@ names:
 
 
 def run_one_variant(n_epochs: int, yaml_25k: Path, yaml_citra: Path,
-                    run_dir: Path) -> dict | None:
-    """Roda pré-treino (n_epochs) + fine-tuning (300 épocas) para uma variante."""
+                    run_dir: Path, seed: int = DEFAULT_SEED) -> dict | None:
+    """Roda pré-treino (n_epochs) + fine-tuning (300 épocas) para uma variante.
+
+    Convenção de pastas (retrocompatível com as runs existentes):
+      seed 42          -> ep_010/            (sem sufixo, como sempre foi)
+      demais seeds     -> ep_010_seed0123/   (padrão da ablation_sintetico)
+    """
     from ultralytics import YOLO
 
-    variant_dir = run_dir / f"ep_{n_epochs:03d}"
+    suffix = "" if seed == DEFAULT_SEED else f"_seed{seed:04d}"
+    variant_dir = run_dir / f"ep_{n_epochs:03d}{suffix}"
     variant_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Fase 1: pré-treino ──
     print(f"\n{'='*72}")
-    print(f"  FASE 1 — PRÉ-TREINO {n_epochs} épocas (seed={SEED})")
+    print(f"  FASE 1 — PRÉ-TREINO {n_epochs} épocas (seed={seed})")
     print(f"{'='*72}")
 
     pretrain_best = variant_dir / "pretrain" / "weights" / "best.pt"
@@ -210,7 +225,7 @@ def run_one_variant(n_epochs: int, yaml_25k: Path, yaml_citra: Path,
                 data=str(yaml_25k),
                 epochs=n_epochs,
                 patience=PRETRAIN_PATIENCE,
-                seed=SEED,
+                seed=seed,
                 project=str(variant_dir),
                 name="pretrain",
                 device=0,
@@ -247,7 +262,7 @@ def run_one_variant(n_epochs: int, yaml_25k: Path, yaml_citra: Path,
                 data=str(yaml_citra),
                 epochs=FINETUNE_EPOCHS,
                 patience=FINETUNE_PATIENCE,
-                seed=SEED,
+                seed=seed,
                 project=str(variant_dir),
                 name="finetune",
                 device=0,
@@ -273,7 +288,7 @@ def run_one_variant(n_epochs: int, yaml_25k: Path, yaml_citra: Path,
 
     result = {
         "pretrain_epochs": n_epochs,
-        "seed": SEED,
+        "seed": seed,
         "pretrain_best": str(pretrain_best),
         "finetune_best": str(finetune_best),
         "metrics": {
@@ -306,6 +321,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Ablation: épocas de pré-treino")
     parser.add_argument("--epochs", type=int, nargs="+", default=EPOCH_VARIANTS,
                         help="Variantes de épocas (default: 10 20 50)")
+    parser.add_argument("--seeds", type=int, nargs="+", default=[DEFAULT_SEED],
+                        help="Seeds a rodar (default: 42). Para o pedido do "
+                             "R2.W3: --epochs 10 --seeds 123 2024")
     parser.add_argument("--dry-run", action="store_true",
                         help="Só mostra o plano, não treina")
     args = parser.parse_args()
@@ -314,7 +332,7 @@ def main() -> None:
     print("  ABLATION — Épocas de pré-treino no dataset_25k_v2")
     print("=" * 72)
     print(f"  Variantes:      {args.epochs}")
-    print(f"  Seed:           {SEED}")
+    print(f"  Seeds:          {args.seeds}")
     print(f"  Fine-tuning:    {FINETUNE_EPOCHS} épocas, patience {FINETUNE_PATIENCE}")
     print(f"  Runs dir:       {RUNS_DIR}")
     print(f"  Dry-run:        {args.dry_run}")
@@ -339,10 +357,12 @@ def main() -> None:
 
     if args.dry_run:
         print(f"\n>> Plano de execução:")
-        for n_ep in args.epochs:
-            est = n_ep * 0.6 + 30  # estimativa grosseira: 0.6 min/época pretrain + 30 min finetune
-            print(f"  {n_ep:>3} épocas pré-treino → fine-tuning 300ep → ~{est:.0f} min")
-        print(f"\n  Total estimado: ~{sum(n * 0.6 + 30 for n in args.epochs)/60:.1f}h")
+        for seed in args.seeds:
+            for n_ep in args.epochs:
+                est = n_ep * 0.6 + 120  # ~0.6 min/ep pretrain + ~2h finetune 300ep
+                print(f"  seed {seed}: {n_ep:>3}ep pré-treino → finetune 300ep → ~{est:.0f} min")
+        total = len(args.seeds) * sum(n * 0.6 + 120 for n in args.epochs)
+        print(f"\n  Total estimado: ~{total/60:.1f}h")
         print(f"\n>> --dry-run: nada executado")
         return
 
@@ -374,10 +394,12 @@ def main() -> None:
     all_results = []
     t0_global = time.time()
 
-    for n_ep in args.epochs:
-        result = run_one_variant(n_ep, yaml_25k, yaml_citra, RUNS_DIR)
-        if result is not None:
-            all_results.append(result)
+    for seed in args.seeds:
+        for n_ep in args.epochs:
+            result = run_one_variant(n_ep, yaml_25k, yaml_citra, RUNS_DIR,
+                                     seed=seed)
+            if result is not None:
+                all_results.append(result)
 
     elapsed_total = time.time() - t0_global
 
@@ -441,11 +463,28 @@ def main() -> None:
         print(f"      da duração do pré-treino.")
 
     # Salva JSON
+    # acumula com runs anteriores (não sobrescreve a rodada histórica da seed 42)
+    prev = []
+    summary_file_path = RUNS_DIR / "ablation_epochs_summary.json"
+    if summary_file_path.exists():
+        try:
+            old = json.loads(summary_file_path.read_text())
+            prev = old.get("variants", [])
+            # compat: rodada antiga não tinha "seed" por variante
+            for v in prev:
+                v.setdefault("seed", old.get("seed", DEFAULT_SEED))
+        except Exception:
+            pass
+    seen = {(v["pretrain_epochs"], v["seed"]) for v in all_results}
+    merged = all_results + [v for v in prev
+                            if (v["pretrain_epochs"], v["seed"]) not in seen]
+    merged.sort(key=lambda v: (v["pretrain_epochs"], v["seed"]))
+
     summary = {
         "generated_at": datetime.now().isoformat(),
         "experiment": "ablation_pretrain_epochs",
-        "seed": SEED,
-        "variants": all_results,
+        "seeds": sorted({v["seed"] for v in merged}),
+        "variants": merged,
         "reference_b2_mAP50": 0.8351,
         "reference_b1_mAP50": 0.8008,
         "reference_a100ep_mAP50": ref_100ep,
