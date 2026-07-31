@@ -94,7 +94,7 @@ def main():
     print(f"\nmulti-seed: {multi} | single-seed: {single}")
 
     # ── figura ───────────────────────────────────────────────────────────────
-    fig, ax = plt.subplots(figsize=(SINGLE_COL_W + 0.8, 3.0))
+    fig, ax = plt.subplots(figsize=(SINGLE_COL_W + 0.8, 2.55))
 
     for key, color, ls, marker, label in (
             ("map50", COLORS["A_prime"], "-", "o", "mAP50"),
@@ -144,7 +144,8 @@ def main():
         Line2D([], [], marker="o", color="gray", linestyle="none",
                markersize=6, markerfacecolor="white", label="single seed"),
     ]
-    ax.legend(handles=handles, loc="lower left", framealpha=0.9)
+    ax.legend(handles=handles, loc="center",
+              bbox_to_anchor=(0.5, 0.5), framealpha=0.95)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
