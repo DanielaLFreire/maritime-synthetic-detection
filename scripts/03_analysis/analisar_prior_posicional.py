@@ -130,6 +130,22 @@ OUT_DIR = Path("results/prior_posicional")
 
 IMG_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff")
 
+# Classes de tamanho COCO, em pixels² de área da bbox.
+SIZE_RANGES = {
+    "all": (0.0, float("inf")),
+    "small": (0.0, 32.0 ** 2),
+    "medium": (32.0 ** 2, 96.0 ** 2),
+    "large": (96.0 ** 2, float("inf")),
+}
+
+# Faixas usadas na estatística de assimetria centro–cauda.
+# Com 5 bins: centrais = {1,2,3}, caudas = {0,4}.
+def central_tail_bins(n_bins: int) -> tuple[list[int], list[int]]:
+    k = n_bins // 3
+    tails = list(range(k)) + list(range(n_bins - k, n_bins))
+    central = [b for b in range(n_bins) if b not in tails]
+    return central, tails
+
 # Escala do proxy de estratificação (ver nota metodológica no cabeçalho)
 PROXY_SCALE = 1e6
 
@@ -265,6 +281,109 @@ def load_ground_truth(root: Path, split: str, label_subdir: str) -> dict:
         "paths": imgs,
         "name_to_id": {im["file_name"]: im["id"] for im in images},
     }
+
+
+def spearman(a: np.ndarray, b: np.ndarray) -> tuple[float, float | None]:
+    """Spearman ρ (e p-valor se scipy disponível). Fallback: Pearson dos postos."""
+    try:
+        from scipy import stats as sps
+
+        r = sps.spearmanr(a, b)
+        return float(r.statistic), float(r.pvalue)
+    except Exception:
+        ra = np.argsort(np.argsort(a)).astype(float)
+        rb = np.argsort(np.argsort(b)).astype(float)
+        return float(np.corrcoef(ra, rb)[0, 1]), None
+
+
+def size_class_of(area: float) -> str:
+    for name in ("small", "medium", "large"):
+        lo, hi = SIZE_RANGES[name]
+        if lo <= area < hi:
+            return name
+    return "large"
+
+
+def filter_by_size(gt: dict, size_class: str) -> dict:
+    """
+    Restringe o GT a uma classe de tamanho COCO.
+
+    O campo `ignore` do COCO NÃO é confiável: `COCOeval._prepare` o sobrescreve
+    com `iscrowd`. Por isso a filtragem REMOVE as anotações fora da classe em
+    vez de marcá-las. As detecções fora da classe são descartadas em
+    `filter_dets_by_size` — sem isso, um FP de qualquer tamanho contaria contra
+    todas as classes.
+
+    Desvio conhecido em relação ao COCO: uma detecção fora da classe que
+    pareasse um GT dentro da classe seria contada como TP pelo COCO e aqui vira
+    FN. Com IoU ≥ 0,5 nas fronteiras 32²/96², o efeito é de segunda ordem.
+    """
+    if size_class == "all":
+        return gt
+
+    lo, hi = SIZE_RANGES[size_class]
+    anns = [a for a in gt["annotations"] if lo <= a["bbox_area"] < hi]
+    out = dict(gt)
+    out["annotations"] = anns
+    out["y_centers"] = np.asarray([a["y_center"] for a in anns], dtype=float)
+    return out
+
+
+def filter_dets_by_size(dets: list[dict], size_class: str) -> list[dict]:
+    if size_class == "all":
+        return dets
+    lo, hi = SIZE_RANGES[size_class]
+    return [d for d in dets if lo <= (d["bbox"][2] * d["bbox"][3]) < hi]
+
+
+def report_size_confound(gt_full: dict) -> dict:
+    """
+    Quantifica o confundidor y_center × tamanho aparente.
+
+    Em câmera marítima fixa, embarcação distante fica alta na imagem (y baixo) e
+    pequena; embarcação próxima fica embaixo (y alto) e grande. Sem correlação,
+    os eixos são independentes e a estratificação vertical é limpa.
+    """
+    y = np.asarray([a["y_center"] for a in gt_full["annotations"]], dtype=float)
+    area = np.asarray([a["bbox_area"] for a in gt_full["annotations"]], dtype=float)
+    rho, p = spearman(y, area)
+
+    counts: dict[str, int] = {"small": 0, "medium": 0, "large": 0}
+    for a in gt_full["annotations"]:
+        counts[size_class_of(a["bbox_area"])] += 1
+
+    ptxt = "" if p is None else f" (p={p:.2e})"
+    print(f"  Spearman(y_center, área da bbox): ρ = {rho:+.3f}{ptxt}")
+    if abs(rho) < 0.2:
+        print("    → correlação fraca: eixo vertical e tamanho são "
+              "aproximadamente independentes.")
+    elif abs(rho) < 0.5:
+        print("    → correlação moderada: o controle por classe de tamanho "
+              "(--size-class) é necessário.")
+    else:
+        print("    → correlação forte: AP por faixa vertical é, em boa medida, "
+              "AP por tamanho. Interprete apenas os resultados controlados.")
+
+    n = sum(counts.values())
+    print("  Classes de tamanho COCO: " + " · ".join(
+        f"{k} {v} ({100 * v / n:.1f}%)" for k, v in counts.items()))
+
+    return {"spearman_rho": rho, "spearman_p": p, "size_counts": counts}
+
+
+def report_area_by_bin(gt: dict, edges: np.ndarray) -> None:
+    """Área mediana da bbox por faixa vertical — magnitude do confundidor."""
+    y = np.asarray([a["y_center"] for a in gt["annotations"]], dtype=float)
+    area = np.asarray([a["bbox_area"] for a in gt["annotations"]], dtype=float)
+    print("  Área mediana da bbox por faixa (px²):")
+    for b in range(len(edges) - 1):
+        lo, hi = edges[b], edges[b + 1]
+        m = (y >= lo) & (y < hi) if b < len(edges) - 2 else (y >= lo) & (y <= hi)
+        if not m.any():
+            continue
+        med = float(np.median(area[m]))
+        print(f"    [{lo:.2f}–{hi:.2f}]  {med:>9.0f}  "
+              f"({size_class_of(med)}, n={int(m.sum())})")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -494,7 +613,84 @@ def aggregate(per_seed: dict, edges: np.ndarray, ref_arm: str):
     return df_flat, df_agg.sort_values(["arm", "bin"]).reset_index(drop=True)
 
 
-def make_figure(df_agg, ref_arm: str, out_dir: Path, metric: str = "AP50"):
+def asymmetry_stats(per_seed: dict, n_bins: int, ref_arm: str, metric: str = "AP50"):
+    """
+    Estatística centro–cauda: UM escalar por braço/seed, em vez de um teste por
+    bin.
+
+    Com n=3 seeds e 5 bins, testar bin a bin gera 10 comparações e p-valores não
+    interpretáveis sem correção. A assimetria (AP médio nas faixas centrais menos
+    AP médio nas caudas) é o contraste pré-especificado que a hipótese do prior
+    posicional prevê: positiva e maior nos braços sintéticos.
+
+    Atenção: com n=3, t crítico bilateral = 4,30. Só um efeito muito grande
+    atinge p < 0,05 — a informação está na CONSISTÊNCIA DE SINAL entre seeds.
+    """
+    import pandas as pd
+
+    central, tails = central_tail_bins(n_bins)
+
+    per_arm: dict[str, dict[str, float]] = {}
+    for arm, seeds in per_seed.items():
+        per_arm[arm] = {}
+        for seed, rows in seeds.items():
+            v = {r["bin"]: r[metric] for r in rows}
+            if not all(b in v for b in central + tails):
+                continue
+            per_arm[arm][seed] = (
+                float(np.mean([v[b] for b in central]))
+                - float(np.mean([v[b] for b in tails]))
+            )
+
+    ref = per_arm.get(ref_arm, {})
+    rows = []
+    for arm, vals in per_arm.items():
+        seeds = sorted(vals, key=int)
+        a = [vals[s] for s in seeds]
+        row = {
+            "arm": arm,
+            "n_seeds": len(a),
+            "central_bins": str(central),
+            "tail_bins": str(tails),
+            "asymmetry_mean_pp": 100.0 * float(np.mean(a)),
+            "asymmetry_std_pp": 100.0 * float(np.std(a)),
+            "per_seed_pp": {s: 100.0 * vals[s] for s in seeds},
+        }
+        common = [s for s in seeds if s in ref]
+        if arm != ref_arm and len(common) >= 2:
+            cur = [vals[s] for s in common]
+            base = [ref[s] for s in common]
+            d = 100.0 * (np.array(cur) - np.array(base))
+            row["delta_vs_ref_pp"] = float(d.mean())
+            row["delta_std_pp"] = float(d.std(ddof=1))
+            row["all_seeds_same_sign"] = bool(np.all(d > 0) or np.all(d < 0))
+            row["p_paired"] = paired_t(cur, base)
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+
+    print("\n" + "=" * 78)
+    print(f"  ASSIMETRIA CENTRO–CAUDA ({metric}) — faixas centrais {central} "
+          f"vs caudas {tails}")
+    print("=" * 78)
+    for r in rows:
+        ps = "  ".join(f"{v:+7.2f}" for v in r["per_seed_pp"].values())
+        print(f"  {r['arm']:16} {ps}   média {r['asymmetry_mean_pp']:+6.2f} pp")
+    print()
+    for r in rows:
+        if "delta_vs_ref_pp" not in r:
+            continue
+        p = r.get("p_paired")
+        ptxt = "n/d" if p is None else f"{p:.4f}"
+        sign = "todas iguais" if r["all_seeds_same_sign"] else "MISTOS"
+        print(f"  {r['arm']:16} Δ vs {ref_arm}: {r['delta_vs_ref_pp']:+6.2f} pp  "
+              f"dp {r['delta_std_pp']:5.2f}  p={ptxt}  sinais: {sign}")
+
+    return df
+
+
+def make_figure(df_agg, ref_arm: str, out_dir: Path, metric: str = "AP50",
+                suffix: str = ""):
     if ref_arm not in set(df_agg["arm"]) or f"d{metric}_pp" not in df_agg.columns:
         print(f"  ⚠ figura pulada: braço de referência '{ref_arm}' sem resultados.")
         return
@@ -542,7 +738,8 @@ def make_figure(df_agg, ref_arm: str, out_dir: Path, metric: str = "AP50"):
     ax1.set_xticklabels(labels, rotation=30, ha="right", fontsize=7)
     ax1.set_xlabel("Faixa de $y_{center}$ do GT (normalizado)")
     ax1.set_ylabel(metric)
-    ax1.set_title(f"(a) {metric} por faixa vertical")
+    cls = suffix.lstrip("_") or "todos os tamanhos"
+    ax1.set_title(f"(a) {metric} por faixa vertical ({cls})")
     ax1.legend(fontsize=7, frameon=False)
     ax1.grid(axis="y", lw=0.3, alpha=0.4)
 
@@ -566,7 +763,7 @@ def make_figure(df_agg, ref_arm: str, out_dir: Path, metric: str = "AP50"):
 
     plt.tight_layout()
     for ext in ("pdf", "png"):
-        plt.savefig(out_dir / f"fig_prior_posicional.{ext}")
+        plt.savefig(out_dir / f"fig_prior_posicional{suffix}.{ext}")
     plt.close()
 
 
@@ -588,6 +785,13 @@ def main() -> None:
                     help="bordas fixas, ex: 0,0.35,0.45,0.55,0.65,1.0")
     ap.add_argument("--seeds", type=int, nargs="+", default=SEEDS)
     ap.add_argument("--ref-arm", type=str, default=REF_ARM)
+    ap.add_argument("--size-class", type=str, default="all",
+                    choices=list(SIZE_RANGES),
+                    help="restringe a análise a uma classe de tamanho COCO, "
+                         "controlando o confundidor y_center × tamanho")
+    ap.add_argument("--metric", type=str, default="AP50",
+                    choices=["AP", "AP50", "AP75", "AR", "AR50"],
+                    help="métrica da figura e da estatística de assimetria")
     ap.add_argument("--no-cache", action="store_true",
                     help="força nova inferência mesmo com cache presente")
     args = ap.parse_args()
@@ -603,16 +807,37 @@ def main() -> None:
     print("=" * 78)
 
     print("\n>> Ground truth")
-    gt = load_ground_truth(args.citra_root, SPLIT, LABEL_SUBDIR)
+    gt_full = load_ground_truth(args.citra_root, SPLIT, LABEL_SUBDIR)
+    y_full = gt_full["y_centers"]
+    print(f"  {len(gt_full['images']):,} imagens · "
+          f"{len(gt_full['annotations']):,} objetos")
+    print(f"  y_center: média {y_full.mean():.3f} · dp {y_full.std():.3f} · "
+          f"p10 {np.quantile(y_full, .10):.3f} · "
+          f"p50 {np.quantile(y_full, .50):.3f} · "
+          f"p90 {np.quantile(y_full, .90):.3f}")
+
+    print("\n>> Confundidor y_center × tamanho")
+    confound = report_size_confound(gt_full)
+
+    gt = filter_by_size(gt_full, args.size_class)
     y = gt["y_centers"]
-    print(f"  {len(gt['images']):,} imagens · {len(gt['annotations']):,} objetos")
-    print(f"  y_center: média {y.mean():.3f} · dp {y.std():.3f} · "
-          f"p10 {np.quantile(y, .10):.3f} · p50 {np.quantile(y, .50):.3f} · "
-          f"p90 {np.quantile(y, .90):.3f}")
+    if args.size_class != "all":
+        print(f"\n>> Restrição a objetos '{args.size_class}': "
+              f"{len(gt['annotations']):,} de {len(gt_full['annotations']):,} "
+              f"objetos ({100 * len(gt['annotations']) / len(gt_full['annotations']):.1f}%)")
+        if len(gt["annotations"]) < 200:
+            print("  ⚠ amostra pequena — considere --bins 3.")
 
     edges = compute_edges(y, args.bins, args.edges)
-    print(f"\n>> Bordas dos bins ({len(edges) - 1} faixas)")
+    n_bins = len(edges) - 1
+    print(f"\n>> Bordas dos bins ({n_bins} faixas)")
     print("  " + "  ".join(f"{e:.4f}" for e in edges))
+    report_area_by_bin(gt, edges)
+
+    per_bin = len(gt["annotations"]) / max(n_bins, 1)
+    if per_bin < 100:
+        print(f"  ⚠ ~{per_bin:.0f} objetos por faixa: AP fica ruidoso. "
+              f"Reduza --bins.")
 
     per_seed: dict[str, dict[str, list]] = defaultdict(dict)
 
@@ -624,8 +849,12 @@ def main() -> None:
                 print(f"  seed {seed}: ✗ peso não encontrado ({w})")
                 continue
             print(f"  seed {seed}:")
-            cache_file = cache_dir / f"{subdir}_seed{seed}.json"
-            dets = predict_arm(w, gt, cache_file, use_cache=not args.no_cache)
+            # O cache é independente da classe de tamanho: as predições são
+            # sempre completas e o filtro é aplicado depois. Trocar
+            # --size-class não custa nova inferência.
+            cache_file = cache_dir / f"{subdir.replace('/', '__')}_seed{seed}.json"
+            dets = predict_arm(w, gt_full, cache_file, use_cache=not args.no_cache)
+            dets = filter_dets_by_size(dets, args.size_class)
             rows = evaluate_bins(gt, dets, edges)
             per_seed[arm][str(seed)] = rows
             resumo = "  ".join(f"[{r['y_lo']:.2f}–{r['y_hi']:.2f}] {r['AP50']:.3f}"
@@ -637,10 +866,17 @@ def main() -> None:
 
     print("\n>> Agregação")
     df_flat, df_agg = aggregate(per_seed, edges, args.ref_arm)
+    df_asym = asymmetry_stats(per_seed, n_bins, args.ref_arm, metric=args.metric)
 
-    df_flat.to_csv(out_dir / "prior_posicional_flat.csv", index=False)
-    df_agg.to_csv(out_dir / "prior_posicional_agg.csv", index=False)
-    (out_dir / "prior_posicional_per_seed.json").write_text(
+    # Sufixo evita que rodadas por classe de tamanho se sobrescrevam.
+    sfx = "" if args.size_class == "all" else f"_{args.size_class}"
+
+    df_flat.to_csv(out_dir / f"prior_posicional_flat{sfx}.csv", index=False)
+    df_agg.to_csv(out_dir / f"prior_posicional_agg{sfx}.csv", index=False)
+    df_asym.to_csv(out_dir / f"prior_posicional_asymmetry{sfx}.csv", index=False)
+
+    central, tails = central_tail_bins(n_bins)
+    (out_dir / f"prior_posicional_per_seed{sfx}.json").write_text(
         json.dumps(
             {
                 "generated_at": datetime.now().isoformat(),
@@ -649,10 +885,23 @@ def main() -> None:
                 "split": SPLIT,
                 "eval": {"imgsz": IMGSZ, "conf": CONF, "iou": IOU_NMS,
                          "max_det": MAX_DET},
+                "size_class": args.size_class,
+                "size_range_px2": [SIZE_RANGES[args.size_class][0],
+                                   None if np.isinf(SIZE_RANGES[args.size_class][1])
+                                   else SIZE_RANGES[args.size_class][1]],
+                "n_objects_evaluated": len(gt["annotations"]),
+                "n_objects_total": len(gt_full["annotations"]),
+                "confound": confound,
                 "edges": [float(e) for e in edges],
+                "central_bins": central,
+                "tail_bins": tails,
+                "metric": args.metric,
                 "ref_arm": args.ref_arm,
                 "note": ("Estratificação por y_center via proxy no campo `area` "
-                         "do COCO; AP_small/medium/large NÃO são válidos aqui."),
+                         "do COCO; AP_small/medium/large NÃO são válidos aqui. "
+                         "O filtro por classe de tamanho REMOVE anotações e "
+                         "detecções fora da faixa, porque COCOeval._prepare "
+                         "sobrescreve o campo `ignore` com `iscrowd`."),
                 "per_seed": per_seed,
             },
             indent=2,
@@ -660,11 +909,12 @@ def main() -> None:
         )
     )
 
-    make_figure(df_agg, args.ref_arm, out_dir, metric="AP50")
+    make_figure(df_agg, args.ref_arm, out_dir, metric=args.metric, suffix=sfx)
 
     # ── Tabela no console ──
     print("\n" + "=" * 78)
-    print(f"  Δ AP50 (pp) vs {args.ref_arm}, por faixa de y_center")
+    print(f"  Δ {args.metric} (pp) vs {args.ref_arm}, por faixa de y_center "
+          f"[{args.size_class}]")
     print("=" * 78)
     if args.ref_arm not in set(df_agg["arm"]):
         print(f"\n  ⚠ Braço de referência '{args.ref_arm}' sem resultados — "
@@ -686,8 +936,8 @@ def main() -> None:
                 if r.empty:
                     cells.append(f"{'—':>18}")
                     continue
-                d = r["dAP50_pp"].iloc[0]
-                p = r["dAP50_p"].iloc[0]
+                d = r[f"d{args.metric}_pp"].iloc[0]
+                p = r[f"d{args.metric}_p"].iloc[0]
                 ptxt = "" if p is None or (isinstance(p, float) and np.isnan(p)) else f" p={p:.3f}"
                 cells.append(f"{d:>+9.2f}{ptxt:>9}")
             print(line + "  ".join(cells))
