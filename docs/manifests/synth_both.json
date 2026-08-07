@@ -1,0 +1,21 @@
+{
+  "arm": "A_joint_both",
+  "fase": "Fase 2 multi-fonte",
+  "zip": "synth_both.zip",
+  "zip_path": "PROJETO_MARINHA/Datasets/_zips/synth_both.zip",
+  "sources": ["ABO", "InaTech"],
+  "volume_por_fonte": 16016,
+  "pool_total": 32032,
+  "n_variations": 13,
+  "citra_base": { "train": 1348, "val": 332, "total": 1680 },
+  "n_sinteticas": 21840,
+  "n_arquivos_zip": 43686,
+  "composicao_n_arquivos": "1680 x 13 x 2 (img+label) = 43680, + 6 entradas de diretorio = 43686",
+  "sha256_lista": "dfbdda0058b37fd6e8c1a0b241a2b9bd6ec65607bd47a96ef3ee0bab6ef546f9",
+  "sha256_escopo": "sha256 da lista ordenada de namelist() do zip, unida por \\n",
+  "seed_pool": 42,
+  "script": "scripts/08_compose_multisource.py",
+  "regeneravel_bit_a_bit": false,
+  "nota": "Pool construido com glob NAO-ordenado (ordem do sistema de arquivos): o mesmo seed nao regenera o mesmo pool entre sessoes. O conjunto exato usado esta preservado neste zip e identificado pelo sha256_lista. Os tres seeds (42, 123, 2024) do braco compartilham este pool. sorted() introduzido a partir do braco InaTech-27.8K.",
+  "data_registro": "2026-08-07"
+}
