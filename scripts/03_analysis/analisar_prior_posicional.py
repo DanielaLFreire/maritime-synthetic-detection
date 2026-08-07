@@ -109,7 +109,7 @@ RUNS_ROOT = Path(
 #   RUNS_ROOT / <subdir> / seed_<seed:04d> / weights / best.pt
 # Se algum braço usar outro padrão, edite RESOLVE_WEIGHTS abaixo.
 ARMS = {
-    "B2 (COCO)": "b2_coco",
+    "B2 (COCO)": "baselines/B2_coco",
     "A' joint": "braco_balanced",
     "A' joint-rand": "braco_random_copypaste_v4",
 }
@@ -135,8 +135,42 @@ PROXY_SCALE = 1e6
 
 
 def resolve_weights(arm_subdir: str, seed: int) -> Path:
-    """Caminho do best.pt de um braço/seed. Edite aqui se o layout diferir."""
-    return RUNS_ROOT / arm_subdir / f"seed_{seed:04d}" / "weights" / "best.pt"
+    """
+    Localiza o best.pt de um braço/seed tolerando as três convenções presentes
+    no Drive deste projeto:
+
+        <arm>/seed_0042/weights/best.pt            (braco_balanced, *_v4)
+        <arm>/seed_42/train/weights/best.pt        (baselines/B2_coco, B1_random)
+        <arm>/seed_0042_finetune/weights/best.pt   (braços sequenciais)
+
+    Checkpoints de pré-treino são descartados; o de fine-tune tem precedência
+    quando ambos existem. Também tolera o padding irregular de
+    `seed_02024_finetune` em braco_a_sintetico.
+    """
+    base = RUNS_ROOT / arm_subdir
+    fallback = base / f"seed_{seed:04d}" / "weights" / "best.pt"
+    if not base.exists():
+        return fallback
+
+    tokens = {f"seed_{seed:04d}", f"seed_{seed}", f"seed_{seed:05d}"}
+    cands = []
+    for p in base.rglob("weights/best.pt"):
+        if "pretrain" in str(p):
+            continue
+        if any(part in tokens or any(part.startswith(t + "_") for t in tokens)
+               for part in p.parts):
+            cands.append(p)
+
+    if not cands:
+        return fallback
+    if len(cands) > 1:
+        ft = [c for c in cands if "finetune" in str(c)]
+        if ft:
+            cands = ft
+    if len(cands) > 1:
+        print(f"    ⚠ múltiplos best.pt para seed {seed} em {arm_subdir}: "
+              f"usando {cands[0].parent.parent.name}")
+    return sorted(cands)[0]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -461,6 +495,10 @@ def aggregate(per_seed: dict, edges: np.ndarray, ref_arm: str):
 
 
 def make_figure(df_agg, ref_arm: str, out_dir: Path, metric: str = "AP50"):
+    if ref_arm not in set(df_agg["arm"]) or f"d{metric}_pp" not in df_agg.columns:
+        print(f"  ⚠ figura pulada: braço de referência '{ref_arm}' sem resultados.")
+        return
+
     import matplotlib
 
     matplotlib.use("Agg")
@@ -628,26 +666,31 @@ def main() -> None:
     print("\n" + "=" * 78)
     print(f"  Δ AP50 (pp) vs {args.ref_arm}, por faixa de y_center")
     print("=" * 78)
-    ref_bins = df_agg[df_agg.arm == args.ref_arm].sort_values("bin")
-    header = "  faixa            n_GT  " + "  ".join(
-        f"{a:>18}" for a in df_agg.arm.unique() if a != args.ref_arm
-    )
-    print(header)
-    for _, rb in ref_bins.iterrows():
-        line = f"  {rb['y_lo']:.2f}–{rb['y_hi']:.2f}  {int(rb['n_gt']):>8}  "
-        cells = []
-        for arm in df_agg.arm.unique():
-            if arm == args.ref_arm:
-                continue
-            r = df_agg[(df_agg.arm == arm) & (df_agg.bin == rb["bin"])]
-            if r.empty:
-                cells.append(f"{'—':>18}")
-                continue
-            d = r["dAP50_pp"].iloc[0]
-            p = r["dAP50_p"].iloc[0]
-            ptxt = "" if p is None or (isinstance(p, float) and np.isnan(p)) else f" p={p:.3f}"
-            cells.append(f"{d:>+9.2f}{ptxt:>9}")
-        print(line + "  ".join(cells))
+    if args.ref_arm not in set(df_agg["arm"]):
+        print(f"\n  ⚠ Braço de referência '{args.ref_arm}' sem resultados — "
+              f"Δ e teste t não calculados.")
+        print(f"    Braços com dados: {sorted(set(df_agg['arm']))}")
+    else:
+        ref_bins = df_agg[df_agg.arm == args.ref_arm].sort_values("bin")
+        header = "  faixa            n_GT  " + "  ".join(
+            f"{a:>18}" for a in df_agg.arm.unique() if a != args.ref_arm
+        )
+        print(header)
+        for _, rb in ref_bins.iterrows():
+            line = f"  {rb['y_lo']:.2f}–{rb['y_hi']:.2f}  {int(rb['n_gt']):>8}  "
+            cells = []
+            for arm in df_agg.arm.unique():
+                if arm == args.ref_arm:
+                    continue
+                r = df_agg[(df_agg.arm == arm) & (df_agg.bin == rb["bin"])]
+                if r.empty:
+                    cells.append(f"{'—':>18}")
+                    continue
+                d = r["dAP50_pp"].iloc[0]
+                p = r["dAP50_p"].iloc[0]
+                ptxt = "" if p is None or (isinstance(p, float) and np.isnan(p)) else f" p={p:.3f}"
+                cells.append(f"{d:>+9.2f}{ptxt:>9}")
+            print(line + "  ".join(cells))
 
     print("\n  Leitura: ganho UNIFORME entre faixas -> hipótese do prior posicional cai.")
     print("           Ganho concentrado nas faixas centrais e nulo/negativo nas")
