@@ -109,7 +109,7 @@ RUNS_ROOT = Path(
 #   RUNS_ROOT / <subdir> / seed_<seed:04d> / weights / best.pt
 # Se algum braço usar outro padrão, edite RESOLVE_WEIGHTS abaixo.
 ARMS = {
-    "B2 (COCO)": "b2_coco",
+    "B2 (COCO)": "baselines/B2_coco",
     "A' joint": "braco_balanced",
     "A' joint-rand": "braco_random_copypaste_v4",
 }
@@ -135,8 +135,40 @@ PROXY_SCALE = 1e6
 
 
 def resolve_weights(arm_subdir: str, seed: int) -> Path:
-    """Caminho do best.pt de um braço/seed. Edite aqui se o layout diferir."""
-    return RUNS_ROOT / arm_subdir / f"seed_{seed:04d}" / "weights" / "best.pt"
+    """
+    Localiza o best.pt de um braço/seed tolerando as três convenções presentes
+    no Drive deste projeto:
+        <arm>/seed_0042/weights/best.pt            (braco_balanced, *_v4)
+        <arm>/seed_42/train/weights/best.pt        (baselines/B2_coco, B1_random)
+        <arm>/seed_0042_finetune/weights/best.pt   (braços sequenciais)
+    Checkpoints de pré-treino são descartados; o de fine-tune tem precedência
+    quando ambos existem. Também tolera o padding irregular de
+    `seed_02024_finetune` em braco_a_sintetico.
+    """
+    base = RUNS_ROOT / arm_subdir
+    fallback = base / f"seed_{seed:04d}" / "weights" / "best.pt"
+    if not base.exists():
+        return fallback
+
+    tokens = {f"seed_{seed:04d}", f"seed_{seed}", f"seed_{seed:05d}"}
+    cands = []
+    for p in base.rglob("weights/best.pt"):
+        if "pretrain" in str(p):
+            continue
+        if any(part in tokens or any(part.startswith(t + "_") for t in tokens)
+               for part in p.parts):
+            cands.append(p)
+
+    if not cands:
+        return fallback
+    if len(cands) > 1:
+        ft = [c for c in cands if "finetune" in str(c)]
+        if ft:
+            cands = ft
+    if len(cands) > 1:
+        print(f"    ⚠ múltiplos best.pt para seed {seed} em {arm_subdir}: "
+              f"usando {cands[0].parent.parent.name}")
+    return sorted(cands)[0]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
