@@ -46,3 +46,6 @@ Thumbs.db
 # Cache
 *.cache
 *.npz
+
+# cache de predições do diagnóstico de prior posicional
+results/prior_posicional/preds_cache/
