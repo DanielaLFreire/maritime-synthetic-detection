@@ -76,8 +76,13 @@ quantil do conjunto completo) em todas as classes, para que as regiões verticai
 sejam a mesma parte da imagem em toda comparação. Bordas por quantil dentro de
 cada classe produziriam faixas diferentes e resultados não comparáveis.
 
-**Validação.** O ganho global agregado do A′joint reproduz **+0,99 pp** contra o
+**Validação.** O ganho global agregado do A′joint reproduz **+1,01 pp** contra o
 B2; o artigo reporta +1,00 pp.
+
+**Precisão.** Todos os valores abaixo vêm dos CSVs em `results/prior_posicional/`,
+não da saída arredondada do console. A distinção importa: com AP50 truncado em
+três casas, o déficit de campo próximo do A′joint em `all` aparecia como empate
+em uma das seeds e o sinal consistente passava despercebido.
 
 ## 4. Resultado
 
@@ -85,31 +90,57 @@ B2; o artigo reporta +1,00 pp.
 
 | classe | braço | topo 0–0,45 | banda 0,45–0,62 | frente 0,62–1 | n por faixa |
 |---|---|---|---|---|---|
-| all | A′joint | +0,07 | +2,03\* | −1,20 | 250 / 747 / 250 |
-| all | rand | −0,17 | +1,40 | +0,23 | 250 / 747 / 250 |
-| small | A′joint | **+3,27\*** | +2,90\* | −3,70 | 88 / 241 / 66 |
-| small | rand | **+4,53\*** | +2,43\* | −1,53 | 88 / 241 / 66 |
-| medium | A′joint | −0,27 | +0,73 | +0,10 | 119 / 359 / 123 |
-| medium | rand | +0,33 | −0,27 | +0,63 | 119 / 359 / 123 |
-| large | A′joint | +1,60 | +1,80 | −1,23 | 43 / 147 / 61 |
-| large | rand | +2,67\* | +0,60 | +2,10 | 43 / 147 / 61 |
+| all | A′joint | +0,09 | +2,05\* | **−1,20\*** | 250 / 747 / 250 |
+| all | rand | −0,14 | +1,39 | +0,22 | 250 / 747 / 250 |
+| small | A′joint | **+3,28\*** | +2,92\* | −3,69 | 88 / 241 / 66 |
+| small | rand | **+4,56\*** | +2,45\* | −1,52 | 88 / 241 / 66 |
+| medium | A′joint | −0,30 | +0,75 | +0,09 | 119 / 359 / 123 |
+| medium | rand | +0,31 | −0,27 | +0,61 | 119 / 359 / 123 |
+| large | A′joint | +1,60 | +1,78 | −1,20 | 43 / 147 / 61 |
+| large | rand | +2,65\* | +0,58 | +2,11 | 43 / 147 / 61 |
 
 **A hipótese não se confirma.** Em objetos pequenos — a classe onde o ganho de
-fato existe — o ganho na faixa do horizonte (+3,27 pp) é **maior** que na banda
-central (+2,90 pp), com sinal consistente nas três seeds. Se houvesse prior de
+fato existe — o ganho na faixa do horizonte (+3,28 pp) é **maior** que na banda
+central (+2,92 pp), com sinal consistente nas três seeds. Se houvesse prior de
 banda, era na banda que o ganho deveria se concentrar.
 
 Ganho global ponderado por classe:
 
 | classe | A′joint | rand |
 |---|---|---|
-| all | +0,99 pp | +0,85 pp |
-| small | +1,88 pp | +2,24 pp |
-| medium | +0,41 pp | +0,04 pp |
-| large | +1,03 pp | +1,32 pp |
+| all | +1,01 pp | +0,85 pp |
+| small | +1,90 pp | +2,26 pp |
+| medium | +0,41 pp | +0,02 pp |
+| large | +1,02 pp | +1,31 pp |
 
 O ganho é um fenômeno de objetos pequenos, distribuído ao longo da altura da
 imagem. Corrobora, por caminho independente, o achado de ARsmall da Tabela 7.
+
+### 4.1 Uma assimetria que sobrevive: déficit de campo próximo
+
+Na faixa inferior (`y_center` > 0,62), o A′joint fica **1,20 pp abaixo do B2 nas
+três seeds** com o conjunto agregado (n=250) — enquanto o A′joint-rand não
+apresenta déficit (+0,22 pp). Este é o **único ponto de toda a análise em que a
+ancoragem in-place se distingue da colocação aleatória**, e é o resultado mais
+interessante do diagnóstico depois do resultado negativo principal.
+
+Duas leituras possíveis, não distinguíveis com os dados atuais:
+
+1. **Custo da ancoragem.** Colar crops nas coordenadas reais faria o modelo tratar
+   a região de campo próximo de forma mais rígida. Contra essa leitura: o efeito
+   não aparece na banda central, onde a densidade de âncoras é muito maior.
+2. **Qualidade de crop em âncoras grandes.** A área mediana da bbox no campo
+   próximo é 2.737 px², contra ~1.950 nas demais faixas. Crops do SAM colados em
+   âncoras maiores sobem de escala e podem ficar borrados. Contra essa leitura: o
+   déficit não cresce com a classe de tamanho (large: −1,20 pp, sinais mistos).
+
+Restringindo a objetos pequenos (n=66), os deltas por seed são +4,60 / −9,80 /
+−5,90 — não resolvível. Não sabemos qual regime de tamanho dirige o efeito
+agregado.
+
+Tem relevância operacional: campo próximo é onde a vigilância menos tolera falhas
+de detecção. Resolver exigiria mais seeds, e é a única extensão deste diagnóstico
+com retorno claro.
 
 ## 5. Falha da estatística inicialmente pré-especificada
 
@@ -140,11 +171,10 @@ necessária de todo modo.
 
 - **n = 3 seeds.** O t crítico bilateral é 4,30; nenhum efeito moderado atinge
   p < 0,05. As conclusões se apoiam em consistência de sinal, não em p-valores.
-- **Déficit de campo próximo não resolvido.** Objetos pequenos na faixa inferior
-  mostram −3,70 pp, mas com n=66 e sinais mistos (+4,60 / −9,80 / −5,90),
-  dominados por uma seed. Não é possível distinguir efeito de ruído. Tem
-  relevância operacional (campo próximo importa para vigilância), e resolver
-  exigiria mais seeds.
+- **Déficit de campo próximo parcialmente resolvido.** O efeito é consistente nas
+  três seeds no conjunto agregado (−1,20 pp, n=250), mas não é atribuível a uma
+  classe de tamanho: dentro de `small` os sinais são mistos (+4,60 / −9,80 /
+  −5,90) sobre 66 objetos. Ver seção 4.1.
 - **Um p < 0,05 isolado.** `rand` em `medium` deu −0,73 pp com p = 0,044. São oito
   testes de assimetria na tabela e a magnitude é sub-ponto. Tratado como ruído.
 - **Escopo in-domain.** O diagnóstico usa apenas o test set do CITRA-3D-Real. O
@@ -156,10 +186,15 @@ necessária de todo modo.
 
 ## 7. Conclusão
 
-Não há evidência de que a composição in-place induza dependência posicional
-mensurável. O ganho distribui-se por toda a extensão vertical da imagem, é maior
+Não há evidência de que a composição in-place induza dependência posicional do
+tipo suposto. O ganho distribui-se por toda a extensão vertical da imagem, é maior
 fora da banda central que dentro dela, concentra-se em objetos pequenos, e
 persiste após controle por classe de tamanho.
+
+A exceção é o campo próximo (seção 4.1), onde o A′joint perde 1,20 pp de forma
+consistente e a colocação aleatória não perde. É um efeito localizado e de sinal
+oposto ao previsto pela hipótese original — que previa ganho concentrado no
+centro, não perda concentrada na base.
 
 Isto não prova ausência de viés — nenhum experimento prova ausência. O que foi
 feito: procurar a assinatura que o viés deixaria, em quatro cortes independentes
