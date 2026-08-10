@@ -1,0 +1,234 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+\newcommand{\resp}[1]{\par\noindent\textbf{Response.} #1}
+\newcommand{\chg}[1]{\par\noindent\textbf{Changes.} \textit{#1}}
+\newcommand{\pt}[1]{\par\medskip\noindent\textbf{#1}}
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Revision Letter}\\[4pt]
+SIBGRAPI 2026 --- Paper ID 173\\
+\textit{Visual Similarity Is Not Enough: Domain-Adapted Synthetic Data for
+Maritime Vessel Detection}
+\end{center}
+
+\bigskip
+Dear Program Chairs and Reviewers,
+
+We thank the three reviewers for their careful and constructive reviews. We
+have addressed every point raised. Beyond textual clarifications, the revision
+includes \emph{new experimental evidence} produced specifically for this
+rebuttal: (i)~a multi-seed replication of the pre-training epoch ablation at
+the endpoints requested by Reviewer~2; (ii)~a new similarity-vs-structure
+diagnostic over the full curated pool that addresses the top-$k$ curation
+question without confounds; (iii)~the zero-shot evaluation of the A$'$~seq.\
+arm requested by Reviewer~3; and (iv)~formal seed-paired significance tests
+replacing the informal ``non-overlapping ranges'' criterion. All new scripts
+and per-seed result files have been committed to the anonymised repository
+cited in the paper.
+
+A PDF with all changes highlighted (generated with \texttt{latexdiff}) is
+provided alongside this letter. Section, table, and figure numbers below refer
+to the revised paper.
+
+\section*{Reviewer 1}
+
+\pt{R1.1 --- The title claim should be softened or scoped.}
+\resp{We kept the title but scoped the claim precisely: the abstract,
+Section~III, and the conclusion now state that it is \emph{global, whole-image}
+visual similarity that fails to predict transferability. More importantly, the
+claim is now backed by a mechanism rather than a caveat: a new diagnostic
+(Section~IV-A) recomputes the curation score for all 27{,}796 curated images
+and shows the similarity ranking to be nearly orthogonal to the structural
+axes that cause the negative transfer (see R2.W4 below).}
+\chg{Abstract; Section~III (dataset paragraph); Section~IV-A; Conclusion.}
+
+\pt{R1.2 --- The joint-rand ablation deserves open discussion.}
+\resp{Agreed. The revised Section~IV-B reports the out-of-domain comparison
+openly: sea-aware random placement is not merely comparable but
+\emph{consistently better} out of domain ($+1.91$~pp over A$'$~joint on SMD,
+all three seeds, seed-paired $p=0.005$). We now frame anchoring as an
+engineering choice rather than the mechanism: we recommend in-place anchoring
+when auditability and the absence of placement heuristics matter (every
+synthetic position inherits a real observation; no sea-region model or
+inpainting required), and random placement when cross-domain generalisation is
+the priority.}
+\chg{Section~IV-B (final paragraph); Section~IV-C.}
+
+\pt{R1.3 --- Formal statistical testing.}
+\resp{All headline comparisons are now assessed with two-sided seed-paired
+$t$-tests (seeds matched across arms), replacing the informal criterion. The
+central claims hold: A$'$~joint vs.\ B2, $+1.00$ mAP50 in every seed,
+$p=0.024$; mAP50-95 $+1.50$, $p<0.001$; Recall $+2.2$, $p=0.013$; negative
+transfer of A and B, both $p\le0.005$. Equivalences are also confirmed as
+non-differences (A vs.\ B, $p=0.71$; B2-long vs.\ B2, $p=1.0$; joint-rand vs.\
+joint in-domain, $p=0.90$). Where a comparison does \emph{not} survive testing
+we now say so explicitly (see R2.W2). A footnote explains why the paired
+$t$-test is the appropriate small-sample choice (with $n{=}3$ an exact
+sign-permutation test cannot attain $p<0.25$).}
+\chg{Section~III-C (protocol + footnote); Sections~IV-A, IV-B, IV-C
+throughout.}
+
+\pt{R1.4 --- Is crop scale conditioned on vertical position (perspective)?}
+\resp{No, and the revised text says so explicitly. Section~III-B now specifies
+the full A$'$~joint-rand procedure: real vessels removed by fast-marching
+inpainting (Telea, radius 3~px; new reference [25]); sea region defined by an
+adaptive horizon (top of the highest real bounding box), a floor at 35\% of
+the image height, and an HSV refinement that excludes vertical obstacles;
+rejection sampling with $\ge$75\% of the box inside the region and pairwise
+IoU~$<0.2$; crop sizes drawn from the empirical width--height distribution of
+all real boxes, \emph{independently of vertical position} --- perspective is
+deliberately not modelled. That the unmodelled variant matches (and out of
+domain exceeds) the anchored one reinforces our interpretation that the gain
+stems from crop diversity and the training regime, not geometric realism.}
+\chg{Section~III-B (new paragraph).}
+
+\pt{R1.5 --- At which resolution is the size stratification computed?}
+\resp{We resolved this by computational reproduction rather than recollection:
+we re-implemented the size-stratified evaluation with \texttt{pycocotools},
+per seed, under both candidate conventions. The convention that reproduces the
+published Table~III is COCO thresholds in \emph{native image pixels}
+($1920\times1080$); the alternative ($640\times640$ canvas) diverges by an
+order of magnitude. Both conventions are now declared where used: Table~I's
+71.6\% small-object statistic uses the $640$ canvas (matching the network
+input), Table~III uses native pixels; the captions state this. Table~III
+itself was regenerated from the committed script with per-seed values (minor
+changes $\le0.01$, same directions), and the per-seed artifacts are in the
+repository.}
+\chg{Captions of Tables~I and~III; Table~III values; repository
+(\texttt{ap\_by\_size.py} + per-seed JSON).}
+
+\section*{Reviewer 2}
+
+\pt{W1 --- Seed-level stability; sea-region procedure.}
+\resp{Seed-level orderings are now reported: A$'$~joint $>$ B2 in 3/3 seeds
+(likewise mAP50-95 and Recall); A and B $<$ B2 in 3/3; A$'$~seq.\ $<$ B2 in
+3/3. The sea-region and sampling procedure is fully specified (see R1.4). The
+anchored-vs-random comparison is discussed openly, including the out-of-domain
+result favouring the random variant (see R1.2).}
+\chg{Sections~III-B, IV-A, IV-B, IV-C.}
+
+\pt{W2 --- Statistical support, in particular for the small-object claim.}
+\resp{The reviewer was right on the exact metric: with the regenerated
+per-seed values, $\mathrm{AR}_\mathrm{small}$ improves in all three seeds
+($0.390\rightarrow0.411$, $+2.1$~points) but does not reach significance at
+$n{=}3$ ($p=0.13$). The revision reports this honestly: improvements are
+consistent in direction across \emph{all} six size-stratified metrics and all
+seeds, significant for medium and large objects ($p<0.05$), with the largest
+point estimates --- but no significance claim --- for small objects. The
+abstract, results, discussion, and conclusion were all reworded accordingly.}
+\chg{Abstract; Section~IV-B; Table~III; Discussion (``Operational
+relevance''); Conclusion.}
+
+\pt{W3 --- The epoch ablation uses a single seed.}
+\resp{We ran the replication the reviewer requested at the endpoints. The
+10-epoch point now has three seeds: mAP50 $0.8210\pm0.0036$, below the COCO
+baseline in all three seeds; the 100-epoch endpoint (three seeds,
+$0.7936\pm0.0049$) is significantly below the 10-epoch point (seed-paired
+$p=0.028$), confirming under replication that degradation grows with exposure.
+Figure~4 was regenerated: filled markers with error bars at 0, 10, and 100
+epochs; open markers explicitly mark the remaining single-seed points (20,
+50). Incidentally, the multi-seed endpoint strengthens the trend: the previous
+single-seed 100-epoch value (0.8006) happened to be the most optimistic of the
+three seeds.}
+\chg{Figure~4 (figure, caption); Section~IV-A.}
+
+\pt{W4 --- Would a stricter top-$k$ similarity curation change the outcome?}
+\resp{Rather than train on one specific top-$k$ (which would confound
+curation with pre-training-set size), we answer the question for the entire
+family of global-similarity criteria. We recomputed the curation score for all
+27{,}796 curated images under the original protocol and profiled similarity
+deciles against the structural variables. The ranking is nearly orthogonal to
+them: Spearman $\rho=-0.152$ against vessel area, and object density is
+constant at one vessel per image, so similarity has no selective power on that
+axis at all. Even the top-5\% most similar images have a median vessel area of
+29\% --- versus 0.1\% operationally --- so any stricter threshold merely climbs
+the same ranking towards the same structural profile. No global-similarity
+threshold can close the gap; this is now stated with the numbers in
+Section~IV-A, and the former ``left to future work'' sentence was replaced
+accordingly. The diagnostic script and artifacts are in the repository.}
+\chg{Section~III (dataset paragraph); Section~IV-A (new passage); repository
+(\texttt{clip\_decile\_profile.py} + artifacts).}
+
+\pt{W5 --- The 50/50 joint protocol is ambiguous.}
+\resp{Now fully specified: 13 variations per real training image (1{,}348
+real $\rightarrow$ 17{,}524 synthetic); in the balanced joint regime the real
+set is repeated $13\times$, so one A$'$~joint epoch contains 35{,}048 images
+(17{,}524 real + 17{,}524 synthetic, 50/50 by construction). B2-long matches
+this volume with no synthetic data.}
+\chg{Section~III-B; Section~III-C (B2-long definition).}
+
+\section*{Reviewer 3}
+
+\pt{R3.1 --- What exactly is A$'$~seq., and why 100 epochs?}
+\resp{The definition is now explicit: a two-stage pipeline --- 100 epochs of
+pre-training on the synthetic set, then 300 epochs of fine-tuning on real
+CITRA-3D-Real only; unlike A$'$~joint, the two sources are never mixed (and
+unlike B2-long, which contains no synthetic data). Extending the synthetic
+stage beyond 100 epochs is counter-indicated by the monotonic degradation of
+Figure~4; the results text now makes this connection. We also qualified the
+$-1.31$ figure: below the baseline in all three seeds but not significant at
+$n{=}3$ ($p=0.14$).}
+\chg{Section~III-C; Section~IV-B.}
+
+\pt{R3.2 --- A$'$~seq.\ is missing from the zero-shot table.}
+\resp{Added: A$'$~seq.\ reaches $0.6026\pm0.0373$ mAP50 on SMD ($+1.58$ vs.\
+B2, the largest seed variance in the table, hence statistically
+indistinguishable from B2). This is informative: the arm that degrades
+in-domain does \emph{not} degrade out of domain, indicating that the damage of
+the sequential regime is specific to in-domain fine-tuning rather than a
+general corruption of features. The interpretation is now in Section~IV-C.}
+\chg{Table~IV; Section~IV-C.}
+
+\pt{R3.3 --- Notation in the experimental-setup list.}
+\resp{Fixed as suggested: A$'$~joint (COCO $\rightarrow$ real+synthetic
+combined 50/50 in a single run).}
+\chg{Section~III-C.}
+
+\pt{R3.4 --- Table~II is too wide.}
+\resp{Converted to percentages (e.g., $84.51\pm0.33$), as suggested; the
+caption declares the unit and $\Delta$ in percentage points.}
+\chg{Table~II.}
+
+\section*{Corrections made on our own initiative}
+
+While reproducing every number for this revision from committed scripts, we
+found and fixed two inaccuracies; we report them here for full transparency.
+
+\begin{enumerate}[leftmargin=1.4em]
+\item \textbf{Public-set vessel area: $\sim$54\% $\rightarrow$ 39\%
+(median).} The previously reported $\sim$54\% could not be reproduced. The
+value measured on the actual pre-training set (27{,}796 images, committed
+script) is a median of 38.9\% (mean $\sim$41\%). Figure~1, Table~I, the
+abstract, and the related-work discussion were updated, and the derived scale
+ratio was corrected from $\sim$500$\times$ to $\sim$400$\times$. The paper's
+argument is unaffected --- if anything the corrected measurement is
+conservative, and it now has full provenance.
+\item \textbf{Table~IV, B2-long: $0.5755\pm0.0131 \rightarrow
+0.5706\pm0.0063$.} We discovered that the previously reported value included
+one seed evaluated with an intermediate checkpoint (its training run finished
+later the same day and overwrote the file). Re-evaluating all three seeds with
+the final checkpoints yields the corrected value; two of the three seeds
+reproduce the original numbers exactly. The derived deltas in the text were
+updated ($-1.1\rightarrow-1.6$~pp vs.\ B2; A$'$~joint gap
+$+2.47\rightarrow+2.96$~pp). The qualitative conclusion (mild out-of-domain
+harm from real-image oversampling) is unchanged, indeed slightly
+strengthened.
+\end{enumerate}
+
+Table~III was likewise regenerated from the committed evaluation script with
+per-seed values (changes $\le0.01$, same directions throughout); the
+repository now contains every script and per-seed artifact needed to reproduce
+Tables~II--IV and Figures~1 and~4.
+
+We believe the revision addresses all concerns and thank the reviewers again
+for comments that measurably improved the paper's rigour.
+
+\bigskip
+\noindent The Authors
+\end{document}
